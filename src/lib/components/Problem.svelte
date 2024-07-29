@@ -1,3 +1,4 @@
+\
 <script lang="ts">
 	import { displayLatex } from "$lib/latexStuff";
 	import { ImageBucket } from "$lib/ImageBucket";
@@ -128,6 +129,8 @@
 			<p class="header">Answer</p>
 			<p id="answer-render">{@html latexes.answer}</p>
 			<p class="header">Solution</p>
+			<p id="solution-render">{@html latexes.solution}</p>
+			<p class="header">AI Feedback</p>
 			<p id="solution-render">{@html latexes.solution}</p>
 			<br />
 			<p>
