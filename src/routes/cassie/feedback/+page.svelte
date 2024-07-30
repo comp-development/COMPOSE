@@ -66,44 +66,7 @@
 		console.log(messages);
 		const curMessage = allMessages[allMessages.length - 1];
 		console.log(curMessage);
-		if (
-			curMessage.role == "assistant" &&
-			curMessage.content.includes("await supabase")
-		) {
-			console.log(curMessage.content);
-			const regex = /```javascript(.*?)```/s;
-			const match = curMessage.content.match(regex);
-			console.log(match);
-			let codeBlock = curMessage.content;
-			if (match) {
-				codeBlock = match[1].trim();
-			}
-			const asyncFunction = new Function(
-				"supabase",
-				`
-                    return (async () => {
-                        const { data } = ${codeBlock}
-                        return data;
-                    })();
-                    `
-			);
-			try {
-				const result = asyncFunction(supabase)
-					.then((result) => {
-						console.log(result);
-						problems = result;
-						console.log("Async code execution completed.");
-					})
-					.catch((error) => {
-						console.error("Async code execution error:", error);
-					});
-				console.log("Code executed successfully. Result:", result);
-			} catch (error) {
-				console.error("Error executing code:", error);
-			}
-		} else {
-			console.log("Not a function");
-		}
+		alert(messages[0]);
 	}
 
 	const query = "";
@@ -118,7 +81,7 @@
 	<h1>Talk to CASSIE!</h1>
 	<ul>
 		{#each $messages as message}
-			<li>{message.role}: {message.content}</li>
+			<li><c><strong>{message.role}</strong></c>: {message.content}</li>
 		{/each}
 	</ul>
 	<form on:submit={handleSubmit}>
@@ -142,5 +105,9 @@
 
 	h1 {
 		width: 100%;
+	}
+
+	c {
+		color: #1326f9;
 	}
 </style>
