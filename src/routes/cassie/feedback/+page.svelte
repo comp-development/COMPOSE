@@ -7,7 +7,10 @@
 	import { sleep } from "openai/core";
 	//import { supabase } from "$lib/src/supabaseClient";
 	//https://sdk.vercel.ai/docs/guides/frameworks/sveltekit
-	let problem = "What is 1+1?"; let solution = "Trivially 2.";	
+
+	let problem = ""; let solution = ""; //Delete both of these variables
+
+	let obj;
 	//function provideFeedback(problem, solution){
 		// let user;
 		// let promptParts;
@@ -39,31 +42,24 @@
 		`;
 
 		const promptParts = [
-			/*"COMPOSE - the Collaborative Online Math Problem Organization and Sharing Environment - is a storage platform for contest math problems.",
-			"Math contest organizers must query the COMPOSE database when creating math competitions.",
-			"You are CASSIE - the COMPOSE AI Support System and Information Expert.",
-			"Your job is to answer user's questions regarding the COMPOSE database to the best of your knowledge.",
-			"Each entry in the database corresponds to one math problem.",
-			datasetPrompt,
-			"Database queries should fill in the [TODO] using the following supabase-js function template: ```javascript await supabase.from('full_problems').select('*').[TODO]```",
-			//"This user's ID is " + user.id,
-			"If your message includes a database query, do not include any additional text.",*/
+		"I'm about to give you a math problem and solution intended for advanced 10th graders who are good at competition math. For this problem and solution, I would like you to break down the individual mathematical subtopics required for each solving step of the problem and solution. ",
+		
+		"Assess the difficulty of this problem based on how commonly known or understood these subtopics are. A difficulty 1 problem would utilize strategies and formulas that everyone at a tenth grade level should know, while a difficulty 10 problem would utilize formulas or topics that very few students would have learned. ",
 
-			"Rate this problem on 7 scales of 1-10 for how hard it would be for a 10th grader.",
+		"Break down this difficulty into 3 different topics and evaluate each on its own 10 point scale, the first scale should measure the difficulty of the specific topic that is being analyzed, use the subtopics that you have found earlier in order to decide a rating here. Now the second scale should measure the insight that the person must make to solve the problem, specifically look for what the person must know in order to make the hardest insight of this problem, what the person must realize they can do. Now the third scale, which should be the easiest, simply evaluate this scale based off of the amount of steps required, is there a lot of plugging in?",
 
-			"The first scale should rate based on how hard the topic is to understand, for example, a question like this would be given 5.00/10: You’re playing a game where you need to roll at least n to win. You can either roll two fair 6-sided dice and take the sum of the rolls, or one fair 12-sided die. For what value of n between 1 and 12, inclusive, is the probability you win equal regardless of which option you choose? And for example, this problem would be a 6.00/10: Compute the number of ordered triples of integers (x, y, z) that satisfy xyz = xz + xy + yz − x − y − z. A problem like such would be given a 1/10: What is 1+1? A problem like such would be given a 4.4/10: If x, y are positive integers not exceeding 100, compute the maximum possible value of lcm(gcd(x, y), lcm(x, y)). A problem like such would be given a 9/10: Let a1, a2, a3, and a4 be the answers to [♠1], [♠2], [♠3], and [♠4], respectively. The polynomial p(x) = a3x4 + x2 + x + a2 has complex roots r1…r4. Find the integer closest to the value of ∑n=1 4 (60a4 − a1rn). ",
-			"For the second scale, you want to measure the insight required to find the solution, this specifically will describe how hard it is to think of the solution, specifically look at the hardest part of the solution provided and rate its difficulty on a scale of 1-10.",
-			"Now for the third scale, you want to take a look at the amount of steps required to solve the problem, for example, if it takes only a couple of steps, rate it 1, but if it takes like 20-30 steps, rate it 10.",
-			"Now for the fourth through seventh scales, which unlike the other three will be primarily based on the quality of the problem, ideally, you want this rating to be as low as possible, and this rating has to be on the following scales: The fourth scale of 1-10 will be points for how interesting the problem is, if the problem is enjoyable to solve and have a nice result and is also something very unique, you want to give it 10 points in this category, if the problem just involves expressions and there isn't actually anything unique about it and you commonly see the problem elsewhere (search online to look for this problem), give it 1 point, and if it is anywhere in between, give it 1-10 points, you want to ask yourself: How unique is the problem? Is it a very common math contest problem, or does it feel unlike anything you've seen before?.",
-			"Now for the fifth scale, you want to award 1-10 points based off of how clean the solution is, ideally, the more steps that involve simply bashing values, the fewer points it should recieve in this category, the other thing is, the easier the problem is, the fewer points in this category. ", 
-			"Now for the sixth scale, you want to rate based off of accessibility, think about this: Is the problem understandable to people who are unfamiliar with certain concepts? Does it use approachable vocabulary? Can weaker students work on it and make progress without knowing a very specific concept/solution? Award 1-10 points in this category.",
-			"And now for the final seventh scale, simply look for how clean the solution and how well formatted the problem is, award 1-10 points. ",
+		"When evaluating a math problem, especially for advanced 10th-grade students, it's crucial to consider the interest level it presents. An engaging problem should challenge students' typical problem-solving skills and pique their curiosity. It should offer a unique twist or require an unexpected application of concepts. A problem that is too straightforward may not hold students' interest, while one that cleverly integrates multiple topics or real-world applications can be captivating. For instance, a problem that combines algebra with geometry in a novel way can be more interesting than a simple arithmetic problem. The interest level can be rated from 1 to 10 based on how engaging and unique the problem is, with higher ratings indicating greater intrigue.",
 
-			"Now return all 7 scales. Ideally, keep in mind that this is for competitive math students in 10th grade, so you will want to lower your original grades a bit, and make sure you keep the last four scales as low as possible, in fact, you shouldn't really cross 7 in most categories, since this allows for the most changes to be made, now, rate this problem on the 4 scales mentioned earlier and MAKE SURE TO PROVIDE EACH ONE AS A SEPARATE SCALE!",
-			"Completely break down the entire problem by scale, however, at the end of the message, the only thing that should be there is a set of integers and subtopics and YOU MUST HAVE THEM THERE, YOU CANNOT BE LAZY AND NOT PUT THEM THERE!, when outputing, provide each scale as a singular integer spaced out, for example: (subtopics) 7 8 9 3 5 2 10, do not provide any bolded text or headers or info after these integers, these integers should be the LAST LINE ON THE OUTPUT! NO PERIODS OR ANY PUNCTUATION AFTER, THEY SHOULD LITERALLY BE THE LAST THING YOU RETURN! THE INTEGERS SHOULD BE IN THIS EXACT FORMAT: The integers and subtopics: (subtopics go here) 1 2 1 4 2 5 3, NOTHING ELSE! The subtopics have to be math subtopics and each individual subtopic has to be separated by the three colon ::: and no spaces between the colons and subtopics. And then on a lines before print out simple feedback for how to improve specifically the quality ratings, then also break down the difficulty ratings. Sample output: (feedback/breakdown goes here) The integers: 7 8 9 3 5 2 10.",
-			"When outputing, provide each scale as a singular integer spaced out, for example: 7 8 9 3 5 2 10, do not provide any bolded text or headers before these integers, these integers should be the FIRST LINE ON THE OUTPUT! And then on a new line print out simple feedback for how to improve specifically the quality ratings, then break 2 lines and break down the difficulty ratings. Sample output: 7 8 9 3 5 2 10 (feedback goes here).",
-			"Now the user will provide their answer and solution. MAKE SURE TO RETURN ALL 7 SCALES AND GIVE AS MUCH FEEDBACK AS POSSIBLE! The problem and solution will be separated by a triple colon as seen here :::",
-		];
+		"The solution cleanliness of a problem reflects how straightforward and concise the solution process is. A clean solution is one that requires minimal steps, avoids unnecessary complexity, and ideally has an elegant approach. This can involve a direct method of solving, without needing to traverse through numerous sub-steps or backtrack. For example, a problem that can be solved with a simple formula application rather than a multi-step derivation would be considered to have a cleaner solution. Evaluating solution cleanliness includes considering whether the problem could be solved more efficiently and rating it from 1 to 10, where a higher score signifies a more straightforward and elegant solution.",
+
+		"Accessibility pertains to how easily students can understand the problem statement and the concepts required to solve it. A well-designed problem should be approachable, with clear instructions and a well-defined goal. The language and notation used should be familiar to the target audience, avoiding overly technical terms or advanced concepts that are not within the curriculum. This aspect also considers whether the problem can be grasped quickly by students, without needing extensive background knowledge or additional explanations. Accessibility can be rated on a scale of 1 to 10, with higher ratings indicating that the problem is more easily understood and approachable for most students.",
+
+		"The question formatting involves the clarity and structure of how the problem is presented. A well-formatted problem is organized, with a clear layout that guides the student through the task without confusion. This includes proper use of mathematical notation, clear and concise wording, and a logical flow of information. The formatting should help students focus on solving the problem rather than deciphering the question itself. A problem with clear, unambiguous presentation is rated higher, while one with confusing elements or poor structure would score lower. The rating for question formatting also ranges from 1 to 10, with higher scores reflecting better organization and presentation.",
+
+		"In assessing these aspects, each category contributes to the overall quality of the problem. A math problem that scores high in interest level, solution cleanliness, accessibility, and question formatting is likely to be both challenging and enjoyable for students, providing a meaningful learning experience. Conversely, issues in any of these areas can detract from the problem's effectiveness, making it less engaging, harder to solve, or more difficult to understand. By carefully considering these factors, educators can craft problems that not only test students' skills but also inspire a deeper appreciation for mathematics.",
+
+		"Now having carefully evaluated these 7 factors, at the end of each response, provide the following carefully formatted string, which allows the javascript to break apart and evaluate your response. At the bottom of your response, please include the following: subtopics, and 7 integers with the number that you evaluated each scale out of 10, for example: 7 8 5 1 3 4 5. Now, here is an example of how this last line of output should look like: algebra:::combinatorics:::arithmetic 9 7 8 6 5 7 4. Now each subtopic should be split by the following three colon :::. And make sure not to include any spaces between individual subtopics. So the final example of how something on your last line could look like: algebra:::combinatorics:::geometry 7 9 8 3 2 4 5",
+	];
 		const { input=writable(''), handleSubmit, messages } = useChat({
 			initialMessages: [
 				{
@@ -102,18 +98,12 @@
 					role: "system",
 					content: promptParts[8],
 				},
-				{
-					role: "system",
-					content: promptParts[9],
-				},
 			],
 			onFinish: submitWrapper,
 		});
 	input.set(problem+" which has the following solution: "+solution);
 
 	let problems = [];
-	let awaiting = 0;
-	let obj;
 		function submitWrapper() {
 		console.log(messages);
 		const allMessages = get(messages);
@@ -123,16 +113,48 @@
 		if (curMessage.role == "assistant") {
 			let response = curMessage.content;
 			let breakdown = response.split(" ");
-			let ratings = [breakdown[breakdown.length - 7],breakdown[breakdown.length - 6],breakdown[breakdown.length - 5],breakdown[breakdown.length - 4],breakdown[breakdown.length - 3],breakdown[breakdown.length - 2],breakdown[breakdown.length - 1]]
+			let ratings = [breakdown[breakdown.length - 8],breakdown[breakdown.length - 7],breakdown[breakdown.length - 6],breakdown[breakdown.length - 5],breakdown[breakdown.length - 4],breakdown[breakdown.length - 3],breakdown[breakdown.length - 2],breakdown[breakdown.length - 1]]
 			obj = {
-
+				topics: parseInt(ratings[1]),
+				insight: parseInt(ratings[2]),
+				bashiness: parseInt(ratings[3]),
+				interest: parseInt(ratings[4]),
+				cleanliness: parseInt(ratings[5]),
+				accessibility: parseInt(ratings[6]),
+				formatting: parseInt(ratings[7]),
+				subtopics: ratings[0].split(":::"),
+				feedback: response,
 			}
-		}
-		while(awaiting == 0){
-			sleep(20);
+			alert(obj.topics);
+			alert(obj.insight);
+			alert(obj.feedback);
+			alert(obj.subtopics);
 		}
 		
 	}
+//}
+/*function evaluateFeedback(fobj){
+	const topic = 0.3;
+	const insight = 0.5;
+	const bash = 0.2;
+
+	const interest = 0.4;
+	const clean = 0.2;
+	const accessible = 0.2;
+	const format = 0.2;
+
+	let diff = fobj.topics*topic + fobj.insight*insight + fobj.bashiness*bash;
+	let qual = fobj.interest*interest + fobj.cleanliness*clean + fobj.accessibility*accessible + fobj.formatting*format;
+	
+	let final = {
+		difficulty: diff,
+		quality: qual,
+		subtopics: fobj.subtopics,
+		feedback: fobj.feedback
+	}
+	return final;
+}*/
+
 	const query = "";
 </script>
 
