@@ -51,10 +51,17 @@ const commands = [
 
 export async function registerCommands(isDevelopment = false) {
     try {
-        const route = `/applications/${config.DISCORD_CLIENT_ID}/guilds/${config.GUILD_ID}/commands`
-            
+        const resetGlobalCommands = async () => {
+            const globalRoute = `/applications/${config.DISCORD_CLIENT_ID}/commands`;
+            await rest.put(globalRoute, { body: [] });
+            console.log("Successfully registered global commands");
+        };
+
+        await resetGlobalCommands();
+
+        const route = `/applications/${config.DISCORD_CLIENT_ID}/guilds/${config.GUILD_ID}/commands`;
         await rest.put(route, { body: commands });
-        console.log("Successfully registered application commands.");
+        console.log("Successfully registered guild commands.");
     } catch (error) {
         console.error("Error registering commands:", error);
     }
