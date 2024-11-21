@@ -22,12 +22,21 @@
 	let math_comp_background;
 	let amc_score;
 
+<<<<<<< Updated upstream
 	const getProfile = async () => {
 		try {
 			loading = true;
 			user = await getThisUser();
 			const data = await getUser(user.id);
 
+=======
+	let user_id;
+
+	user.subscribe(async (v) => {
+		try {
+			user_id = v.id
+			data = await getUser(user_id);
+>>>>>>> Stashed changes
 			({
 				full_name,
 				discord,
@@ -57,8 +66,11 @@
 		}
 	};
 
+	console.log(user)
+
 	function discordAuth() {
-		window.location.replace(`/api/linked-role?userId=${user.id}`);
+		console.log("user", user_id);
+		window.location.replace(`/api/linked-role?userId=${user_id}`);
 	}
 
 	async function updateProfile(e) {
