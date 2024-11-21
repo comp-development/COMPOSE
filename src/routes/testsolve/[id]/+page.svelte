@@ -2,22 +2,29 @@
 	import { page } from "$app/stores";
 	import toast from "svelte-french-toast";
 	import { formatTime } from "$lib/formatDate";
+
 	import TestView from "$lib/components/TestView.svelte";
 	import Button from "$lib/components/Button.svelte";
 	import { handleError } from "$lib/handleError";
 	import {
 		getFeedbackQuestions,
-		removeTestsolver,
+		deleteTestsolve,
 		getThisUserRole,
 		getThisUser,
-		getSelectTestsolveAnswers,
-		getProblemTestsolveAnswers,
+		getTestsolveFeedbackAnswers,
+		getProblemFeedback,
 		updateTestsolve,
-		addProblemTestsolveAnswer,
+		addProblemFeedback,
 		updateTestsolveFeedbackAnswers,
 		getOneTestsolve,
 		checkIfTestCoordinator,
+		getTestsolveProblemFeedback,
 		deleteTestsolveAnswer,
+		getTest,
+		sendFeedbackMessage,
+		getTestCoordinators,
+		getUser,
+		fetchSettings,
 	} from "$lib/supabase";
 
 	let loading = true;
@@ -27,110 +34,87 @@
 	let feedbackQuestions = {};
 	let feedbackAnswers = [];
 
-	let startTime = null;
+	let startTime = new Date().getTime();
 	let endTime = null;
 	let isAdmin: boolean;
 
 	let testsolve = null;
+	let solverIds = null;
 	let timeElapsed: number;
+
+	timeElapsed = 0; // in ms
+
 	$: timeElapsed =
 		testsolve?.time_elapsed * 1000 ??
 		new Date(testsolve?.end_time).getTime() -
 			new Date(testsolve?.start_time).getTime();
 
 	let user;
+	let scheme = {};
 	(async () => {
+		scheme = await fetchSettings();
 		user = await getThisUser();
+		await getTestsolve();
+		await permissionCheck();
 	})();
 
-	async function getLocalFeedbackQuestions() {
-		try {
-			const test_feedback_questions = await getFeedbackQuestions(
-				testsolve.test_id
-			);
-
-			for (const x of test_feedback_questions) {
-				feedbackQuestions[x.id] = x;
-				feedbackAnswers.push({
-					feedback_question: x.id,
-					answer: "",
-				});
-			}
-		} catch (error) {
-			if (error.code !== "PGRST116") {
-				handleError(error);
-				toast.error(error);
-			}
-		}
-	}
-
-	async function getFeedbackAnswers() {
-		try {
-			feedbackAnswers = await getSelectTestsolveAnswers(
-				Number($page.params.id)
-			);
-		} catch (error) {
-			handleError(error);
-			toast.error(error.message);
-		}
-	}
-
-	async function deleteTestsolve() {
+	async function deleteThisTestsolve() {
 		try {
 			if (isAdmin) {
-				await removeTestsolver(Number($page.params.id));
+				await deleteTestsolve(Number($page.params.id));
 				toast.success("Successfully deleted testsolve!");
-				window.location.href = "/manage-testsolves";
+				window.location.href = "/admin/testsolves";
 			}
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
+		}
+	}
+
+	async function getTestsolve() {
+		testsolve = await getOneTestsolve(
+			Number($page.params.id),
+			"*,tests(test_name),testsolvers(solver_id)"
+		);
+
+		if (testsolve.length === 0) {
+			throw new Error(
+				"Testsolve with id " + $page.params.id + " doesn't exist!"
+			);
+		} else {
+			console.log("TESTSOLVE", testsolve);
+			solverIds = new Set(testsolve.testsolvers.map((obj) => obj.solver_id));
+			console.log("solverIds1", solverIds);
 		}
 	}
 
 	async function permissionCheck() {
 		try {
-			// check permission
-			testsolve = await getOneTestsolve(Number($page.params.id));
+			if ((await getThisUserRole()) === 40) {
+				console.log("Here");
+				disallowed = false;
+				isAdmin = true;
+			}
+			console.log("THERE");
+			console.log("TESTSOLVE2", testsolve);
+			console.log("TEST_ID", testsolve.test_id);
 
-			if (testsolve.length === 0) {
-				throw new Error(
-					"Testsolve with id " + $page.params.id + " doesn't exist!"
-				);
-			} else {
-				if (
-					(await getThisUserRole()) === 40 ||
-					testsolve.solver_id === user.id
-				) {
-					disallowed = false;
-				} else {
-					// check if test coordinator
-					const exists = await checkIfTestCoordinator(
-						testsolve.test_id,
-						user.id
-					);
-					if (exists) {
-						disallowed = false;
-					}
+			if (await checkIfTestCoordinator(testsolve.test_id, user.id)) {
+				disallowed = false;
+				isAdmin = true;
+			}
+			console.log("solverIds2", solverIds);
+			if (solverIds.has(user.id)) {
+				disallowed = false;
+				isAdmin = false;
+				if (testsolve.status == "Not Started") {
+					await updateTestsolve(testsolve.id, { status: "Testsolving" });
+					await getTestsolve();
 				}
 			}
 
-			if (disallowed) {
-				loading = false;
-			} else {
-				getAnswers();
-				getLocalFeedbackQuestions();
-				getFeedbackAnswers();
-			}
-		} catch (error) {
-			handleError(error);
-			toast.error(error.message);
-		}
-	}
+			console.log("testsolve", testsolve);
 
-	async function getAnswers() {
-		try {
-			answers = await getProblemTestsolveAnswers(Number($page.params.id));
 			loading = false;
 		} catch (error) {
 			handleError(error);
@@ -138,96 +122,100 @@
 		}
 	}
 
-	permissionCheck();
+	async function completeTestsolve() {
+		console.log("DISPATCH 2");
+		await updateTestsolve(testsolve.id, { status: "Reviewing" });
+		await getTestsolve();
+	}
 
 	async function submitTestsolve() {
 		try {
-			endTime = new Date();
+			console.log("Submit");
+			await updateTestsolve(testsolve.id, { status: "Complete" });
+			await getTestsolve();
+			toast.success("Submitted!");
 
-			await updateTestsolve(Number($page.params.id), { feedback: "" });
-
-			// delete old answers
-			await deleteTestsolveAnswer(Number($page.params.id));
-			await addProblemTestsolveAnswer(
-				answers.map((ans) => ({
-					solver_id: user.id,
-					testsolve_id: $page.params.id,
-					problem_id: ans.problem_id,
-					answer: ans.answer,
-					feedback: ans.feedback,
-					correct: ans.correct,
-				}))
+			const testsolve_feedback = await getTestsolveProblemFeedback(
+				testsolve.id
 			);
+			console.log(testsolve_feedback);
+			await sendFeedbackMessage(testsolve_feedback);
 
-			loading = true;
-			for (const ans of feedbackAnswers) {
-				await updateTestsolveFeedbackAnswers(ans.id, {
-					testsolve_id: $page.params.id,
-					feedback_question: ans.feedback_question,
-					answer: ans.answer,
+			const test = await getTest(testsolve.test_id);
+			const user_name = (await getUser(user.id)).full_name;
+			console.log("USER", user_name);
+			const embed = {
+				title: test.test_name + " Testsolve Complete!",
+				//description: "This is the description of the embed.",
+				type: "rich",
+				color: parseInt(scheme.discord.embed_color, 16), // You can set the color using hex values
+				author: {
+					name: user_name,
+					//icon_url: "https://example.com/author.png", // URL to the author's icon
+				},
+				footer: {
+					text: "COMPOSE",
+					icon_url: scheme.logo, // URL to the footer icon
+				},
+			};
+
+			const linkButton = {
+				type: 2, // LINK button component
+				style: 5, // LINK style (5) for external links
+				label: "View Testsolve",
+				url: scheme.url + "/testsolve/" + Number($page.params.id), // The external URL you want to link to
+			};
+
+			const coordinators = await getTestCoordinators(testsolve.test_id);
+			console.log("COORD", coordinators);
+			for (const coordinator of coordinators) {
+				console.log("COOR", coordinator);
+				fetch("/api/discord/dm", {
+					method: "POST",
+					body: JSON.stringify({
+						userId: coordinator.coordinator_id,
+						message: {
+							message: "",
+							embeds: [embed],
+							components: [
+								{
+									type: 1,
+									components: [linkButton],
+								},
+							],
+						},
+					}),
 				});
 			}
-			getAnswers();
-			getFeedbackAnswers();
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
 		}
 	}
-
-	async function loadIsAdmin() {
-		try {
-			const role = await getThisUserRole();
-			if (role >= 40) {
-				isAdmin = true;
-			} else {
-				isAdmin = false;
-			}
-			loading = false;
-		} catch (error) {
-			handleError(error);
-			toast.error(error.message);
-			isAdmin = false;
-		}
-	}
-	loadIsAdmin();
 </script>
 
 {#if loading}
 	<p>Loading...</p>
 {:else if disallowed}
-	<p>You are not a testsolver for this test!</p>
+	<p>You are not authorized!</p>
 {:else}
 	<br />
 	{#if isAdmin}
-		<Button action={deleteTestsolve} title="Delete Testsolve" />
+		<Button action={deleteThisTestsolve} title="Delete Testsolve" />
 	{/if}
 	<br />
-
-	<TestView
-		testId={testsolve.test_id}
-		bind:answers
-		answerable
-		reviewing
-		on:submit={submitTestsolve}
-		{feedbackAnswers}
-		{feedbackQuestions}
-	/>
-	<Button action={submitTestsolve} title="Submit" />
-	<br />
-	<div class="timer">
-		<p>Time taken: {formatTime(timeElapsed, { hideHours: true })}</p>
-	</div>
+	{#if testsolve.status == "Testsolving" && !isAdmin}
+		<TestView {testsolve} on:complete={completeTestsolve} />
+	{:else}
+		<TestView
+			{testsolve}
+			reviewing
+			submittable={testsolve.status != "Complete"}
+			on:submit={submitTestsolve}
+		/>
+		<br />
+	{/if}
 {/if}
 
 <style>
-	.timer {
-		position: absolute;
-		right: 0;
-		top: 0;
-		margin: 10px;
-		padding: 10px;
-		background-color: var(--text-color-light);
-		border: 1px solid black;
-	}
 </style>

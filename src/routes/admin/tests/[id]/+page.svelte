@@ -7,7 +7,7 @@
 		TextArea,
 	} from "carbon-components-svelte";
 	import toast from "svelte-french-toast";
-	import Modal from "$lib/components/Modal.svelte";
+	import ModalButton from "$lib/components/ModalButton.svelte";
 	import Button from "$lib/components/Button.svelte";
 
 	import { handleError } from "$lib/handleError";
@@ -67,7 +67,7 @@
 				(x) => !testCoordinators.some((tc) => tc.id === x.id)
 			);
 
-			await getFeedbackQuestions(testId);
+			feedbackQuestions = await getFeedbackQuestions(testId);
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
@@ -135,7 +135,7 @@
 		<h1>Test {testId}: {test.test_name}</h1>
 		<br />
 		<form on:submit|preventDefault>
-			<Modal runHeader="Delete Test" onSubmit={deleteTest} />
+			<ModalButton runHeader="Delete Test" onSubmit={deleteTest} />
 		</form>
 		<br />
 		<br />
@@ -167,7 +167,7 @@
 							>
 								{testCoordinator.full_name}
 							</p>
-							<Modal
+							<ModalButton
 								runHeader="Remove {testCoordinator.full_name}"
 								del={true}
 								onSubmit={() => deleteTestCoordinator(testCoordinator.id)}

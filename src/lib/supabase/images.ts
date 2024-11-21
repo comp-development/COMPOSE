@@ -14,6 +14,17 @@ export async function getImages(path: string) {
 	return data;
 }
 
+export async function getScan(testId, takerId) {
+	const { data, error } = await supabase
+		.from("scans")
+		.select("*")
+		.eq("test_id", testId)
+		.eq("taker_id", takerId)
+		.single();
+	if (error) throw error;
+	return data;
+}
+
 /**
  * Download all images
  *
@@ -47,7 +58,7 @@ export async function deleteImages(filePaths: string[]) {
  * @param file
  * @param upsert optional, boolean
  */
-export async function uploadImage(filePath: string, file: any, upsert = true) {
+export async function uploadImage(filePath: string, file: Blob, upsert = true) {
 	let { error } = await supabase.storage
 		.from("problem-images")
 		.upload(filePath, file, {
@@ -63,10 +74,7 @@ export async function uploadImage(filePath: string, file: any, upsert = true) {
  * @returns the image's public URL
  */
 export async function getImageURL(filePath: string) {
-	let { data, error } = await supabase.storage
-		.from("problem-images")
-		.getPublicUrl(filePath);
-	if (error) throw error;
-	
-	return data.publicURL;
+	let { data } = supabase.storage.from("problem-images").getPublicUrl(filePath);
+
+	return data.publicUrl;
 }

@@ -1,6 +1,8 @@
 import { getUser } from "$lib/supabase";
+import dotenv from 'dotenv';
+dotenv.config()
 
-const discordToken = import.meta.env.VITE_BOT_TOKEN;
+const discordToken = process.env.BOT_TOKEN;
 
 export async function POST({ request }) {
 	const body = await request.json();

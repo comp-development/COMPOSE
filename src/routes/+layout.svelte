@@ -10,12 +10,11 @@
 	import { page } from "$app/stores";
 	import { Toaster } from "svelte-french-toast";
 	import { getThisUser } from "$lib/supabase";
-	import scheme from "$lib/scheme.json";
-
+	import { defaultSettings, fetchSettings } from "$lib/supabase/settings"; // Import fetchSettings
 	let loaded = false;
-
 	let hasAccount = true;
-	// user.set(browser ? localStorage.getItem("user") : null);
+	let scheme = defaultSettings; // Initialize scheme variable
+
 	(async () => {
 		user.set(await getThisUser());
 	})();
@@ -25,14 +24,20 @@
 	});
 
 	onMount(async () => {
-		loaded = true;
+		// Fetch settings from the database
+		scheme = await fetchSettings();
+
+		// Set CSS variables dynamically
+		Object.entries(scheme.styles || {}).forEach(([key, value]) => {
+			document.documentElement.style.setProperty(`--${key}`, value);
+		});
+		Object.entries(scheme.constants || {}).forEach(([key, value]) => {
+			document.documentElement.style.setProperty(`--${key}`, value);
+		});
+		loaded = true; // Set loaded to true after fetching
 	});
 
-	$: cssVarStyles = Object.entries(scheme.styles)
-		.map(([key, value]) => `--${key}:${value}`)
-		.join(";");
-
-	// user.subscribe(val => browser ? localStorage.setItem("user", val) : null);
+	// The rest of your component logic remains unchanged
 </script>
 
 <svelte:head>
@@ -46,13 +51,13 @@
 </svelte:head>
 
 <Toaster />
-<main style={cssVarStyles}>
+<main>
 	{#if !loaded}
 		<Banner />
 		<div class="loadingPage flex">
 			<Loading />
 		</div>
-	{:else if !$user && hasAccount && $page.route.id != "/password-reset"}
+	{:else if !$user && hasAccount && $page.route.id != "/password-request"}
 		<Banner />
 		<br />
 		<div class="flex">
@@ -73,7 +78,7 @@
 							}}>Sign-Up</button
 						>
 						<button size="lg" class="link" id="forgotPassword"
-							><a href="/password-reset" style="color: black;"
+							><a href="/password-request" style="color: black;"
 								>Forgot Password</a
 							></button
 						>
@@ -81,7 +86,7 @@
 				</div>
 			</div>
 		</div>
-	{:else if !$user && !hasAccount && $page.route.id != "/password-reset"}
+	{:else if !$user && !hasAccount && $page.route.id != "/password-request"}
 		<Banner />
 		<br />
 		<div class="flex">
@@ -104,7 +109,7 @@
 							Log-In
 						</button>
 						<button size="lg" class="link" id="forgotPassword"
-							><a href="/password-reset" style="color: black;"
+							><a href="/password-request" style="color: black;"								
 								>Forgot Password</a
 							></button
 						>
@@ -263,6 +268,10 @@
 		background-color: #5865f2 !important;
 		color: white !important;
 	}
+	:global(.discordbutton:hover) {
+		background-color: #7984f5 !important;
+		color: white !important;
+	}
 	:global(.disabled) {
 		pointer-events: none;
 		cursor: not-allowed;
@@ -277,19 +286,8 @@
 		color: white !important;
 	}
 	:global(.profileButtons .button:hover) {
-		background-color: var(--secondary-tint) !important;
+		background-color: var(--primary-light) !important;
 		border: 2px solid var(--primary) !important;
-	}
-	:global(.buttonPrimaryLight:hover) {
-		background-color: var(--secondary-tint) !important;
-		border: 2px solid var(--primary-light) !important;
-	}
-	:global(.profileButtons .button:hover p) {
-		color: var(--primary) !important;
-	}
-
-	:global(.buttonPrimaryLight:hover p) {
-		color: var(--primary-light) !important;
 	}
 	:global(.profileButtons .button:focus),
 	:global(.profileButtons .bx--text-input:focus),
@@ -298,6 +296,16 @@
 		box-shadow: 2px solid var(--primary) !important;
 		outline-color: var(--primary) !important;
 	}
+	:global(.buttonPrimaryLight:hover) {
+		background-color: var(--secondary-tint) !important;
+		border: 2px solid var(--primary-light) !important;
+	}
+	
+
+	:global(.buttonPrimaryLight:hover p) {
+		color: var(--primary-light) !important;
+	}
+	
 	:global(.link) {
 		text-decoration: none !important;
 		color: var(--primary-light) !important;
@@ -349,7 +357,8 @@
 	:global(.button p) {
 		color: var(--primary-light) !important;
 	}
-	:global(.button:hover) {
+	:global(.button:hover), 
+	:global(.button:focus) {
 		background-color: var(--primary-light) !important;
 	}
 	:global(.button:hover p) {
@@ -483,3 +492,6 @@
 		}
 	}
 </style>
+
+
+

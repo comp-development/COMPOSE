@@ -1,5 +1,5 @@
 import { supabase } from "../supabaseClient";
-import { archiveProblem } from "./problems";
+import { unarchiveProblem, archiveProblem } from "./problems";
 
 export interface TestRequest {
 	test_name: string;
@@ -28,6 +28,7 @@ export interface TestFeedbackQuestionRequest {
 export async function getAllTests(customSelect = "*") {
 	let { data, error } = await supabase.from("tests").select(customSelect);
 	if (error) throw error;
+	console.log("TESTDATA", data);
 	return data;
 }
 
@@ -55,7 +56,7 @@ export async function getUnarchivedTests(customSelect = "*") {
  */
 export async function getAllTestsOrder(
 	customOrder: string,
-	customSelect = "*"
+	customSelect = "*",
 ) {
 	let { data, error } = await supabase
 		.from("tests")
@@ -91,7 +92,7 @@ export async function getTestInfo(test_id: number, customSelect: string = "*") {
  */
 export async function getTestCoordinators(
 	test_id: number,
-	customSelect: string = "coordinator_id"
+	customSelect: string = "coordinator_id",
 ) {
 	let { data, error } = await supabase
 		.from("test_coordinators")
@@ -113,7 +114,7 @@ export async function getTestCoordinators(
 export async function checkIfTestCoordinator(
 	test_id: number,
 	coordinator_id: number,
-	customSelect: string = "coordinator_id"
+	customSelect: string = "coordinator_id",
 ) {
 	let { error: error, count } = await supabase
 		.from("test_coordinators")
@@ -133,7 +134,7 @@ export async function checkIfTestCoordinator(
  */
 export async function getTestProblems(
 	test_id: number,
-	customSelect: string = "*,full_problems(*)"
+	customSelect: string = "*,full_problems(*)",
 ) {
 	let { data, error } = await supabase
 		.from("test_problems")
@@ -207,7 +208,7 @@ export async function editTestInfo(test: TestEditRequest, test_id: number) {
  */
 export async function addTestCoordinator(
 	test_id: number,
-	coordinator_id: number
+	coordinator_id: number,
 ) {
 	const { data, error } = await supabase
 		.from("test_coordinators")
@@ -225,14 +226,50 @@ export async function addTestCoordinator(
  */
 export async function removeTestCoordinator(
 	test_id: number,
-	coordinator_id: number
+	coordinator_id: number,
 ) {
 	const { error } = await supabase
 		.from("test_coordinators")
 		.delete()
 		.eq("test_id", test_id)
 		.eq("coordinator_id", coordinator_id);
+
 	if (error) throw error;
+}
+
+export async function getNumScanProblems(test_id) {
+	const { count, error } = await supabase
+		.from("grade_tracking")
+		.select("count", { count: "exact", head: true })
+		.eq("test_id", test_id)
+		.single();
+	if (error) throw error;
+	console.log("getNumGradeProblems: ", count);
+	return count;
+}
+
+export async function getNumGradeProblems(test_id) {
+	const { count, error } = await supabase
+		.from("grade_tracking")
+		.select("count", { count: "exact", head: true })
+		.eq("test_id", test_id)
+		.filter("graded_count", "gte", 2)
+		.single();
+	if (error) throw error;
+	console.log("getNumGradeProblems: ", count);
+	return count;
+}
+
+export async function getNumConflictProblems(test_id) {
+	const { count, error } = await supabase
+		.from("grade_tracking")
+		.select("count", { count: "exact", head: true })
+		.eq("test_id", test_id)
+		.eq("needs_resolution", true)
+		.single();
+	if (error) throw error;
+	console.log("getNumGradeProblems: ", count);
+	return count;
 }
 
 /**
@@ -253,7 +290,29 @@ export async function archiveTest(test_id: number) {
 		.eq("test_id", test_id);
 	if (error2) throw error2;
 	for (let i of data) {
-		archiveProblem(i.problem_id);
+		archiveProblem(i.problem_id, true);
+	}
+}
+
+/**
+ * Archives a test. Returns nothing.
+ *
+ * @param test_id number
+ */
+export async function unarchiveTest(test_id: number) {
+	const { error: error1 } = await supabase
+		.from("tests")
+		.update({ archived: false })
+		.eq("id", test_id);
+	if (error1) throw error1;
+
+	let { data, error: error2 } = await supabase
+		.from("test_problems")
+		.select("problem_id")
+		.eq("test_id", test_id);
+	if (error2) throw error2;
+	for (let i of data) {
+		unarchiveProblem(i.problem_id);
 	}
 }
 
@@ -264,7 +323,7 @@ export async function archiveTest(test_id: number) {
  * @returns object in database, including id
  */
 export async function addTestFeedbackQuestion(
-	question: TestFeedbackQuestionRequest
+	question: TestFeedbackQuestionRequest,
 ) {
 	const { data, error } = await supabase
 		.from("test_feedback_questions")
@@ -279,7 +338,7 @@ export async function addTestFeedbackQuestion(
  *
  * @param question_id number
  */
-export async function removeTestFeedbackQuestion(question_id: number) {
+export async function removeTestFeedbackQuestion(feedback_question: number) {
 	const { error } = await supabase
 		.from("test_feedback_questions")
 		.delete()
@@ -294,6 +353,7 @@ export async function removeTestFeedbackQuestion(question_id: number) {
  * @returns object in database, including id
  */
 export async function getFeedbackQuestions(test_id: number) {
+	console.log("getting Feedback Questions", test_id);
 	const { data, error } = await supabase
 		.from("test_feedback_questions")
 		.select("*")
@@ -324,7 +384,7 @@ export async function addAProblemOnTest(test_id: number, problem_id: number) {
  */
 export async function deleteAProblemOnTest(
 	test_id: number,
-	problem_id: number
+	problem_id: number,
 ) {
 	let { error } = await supabase.rpc("delete_test_problem", {
 		p_problem_id: problem_id,
@@ -343,7 +403,7 @@ export async function deleteAProblemOnTest(
 export async function reorderProblemsOnTest(
 	test_id: number,
 	problem_id: number,
-	problem_order: number
+	problem_order: number,
 ) {
 	let { error } = await supabase.rpc("reorder_test_problem", {
 		p_problem_id: problem_id,
@@ -365,7 +425,7 @@ export async function massProblemReordering(
 	test_id: number,
 	problem_id: number,
 	problem_order: number,
-	relation_id: number
+	relation_id: number,
 ) {
 	let { error } = await supabase
 		.from("test_problems")
@@ -375,6 +435,28 @@ export async function massProblemReordering(
 			problem_number: problem_order,
 		})
 		.eq("relation_id", relation_id);
+	if (error) {
+		throw error;
+	}
+}
+
+/**
+ * Upsert the bounding boxes on answers and the location of header lines for a test.
+ *
+ * @param test_id number
+ * @param bounding_boxes string (json)
+ */
+export async function upsertTestAnswerBoxes(
+	test_id: number,
+	bounding_boxes: string,
+) {
+	const { error } = await supabase
+		.from("tests")
+		.update({
+			bounding_boxes,
+		})
+		.eq("id", test_id);
+
 	if (error) {
 		throw error;
 	}

@@ -1,6 +1,7 @@
-import scheme from "$lib/scheme.json";
+import dotenv from 'dotenv';
+dotenv.config()
 
-const discordToken = import.meta.env.VITE_BOT_TOKEN;
+const discordToken = process.env.BOT_TOKEN;
 
 export async function POST({ request }) {
 	console.log(request);
@@ -23,5 +24,7 @@ export async function POST({ request }) {
 	);
 	const data = await response.json();
 	console.log("DATA", data);
-	return new Response(JSON.stringify(data), { status: 300 });
+	return new Response(JSON.stringify(data), { 
+		status: 300,
+	});
 }

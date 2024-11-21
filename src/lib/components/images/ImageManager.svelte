@@ -13,7 +13,7 @@
 	import Button from "$lib/components/Button.svelte";
 	import { ProblemImage } from "$lib/getProblemImages";
 	import { fail } from "@sveltejs/kit";
-	import Modal from "../Modal.svelte";
+	import ModalButton from "../ModalButton.svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError.ts";
 
@@ -226,7 +226,7 @@
 								style="max-width: 100%;"
 							/>
 							<br />
-							<Modal
+							<ModalButton
 								runHeader="Delete"
 								onSubmit={() => deleteImage(listing)}
 								del

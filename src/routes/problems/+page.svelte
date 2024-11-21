@@ -7,15 +7,16 @@
 	import ProgressBar from "$lib/components/ProgressBar.svelte";
 	import Button from "$lib/components/Button.svelte";
 	import { Checkbox, TextArea } from "carbon-components-svelte";
+	import { onMount } from "svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
-	import scheme from "$lib/scheme.json";
+	import { fetchSettings } from "$lib/supabase/settings";
 	import {
 		getImages,
 		getProblemCounts,
 		getThisUser,
 		getProblems,
-		getProblemTestsolveAnswers,
+		getProblemFeedback,
 	} from "$lib/supabase";
 	import { List, Schematics } from "carbon-icons-svelte";
 
@@ -79,6 +80,13 @@
 	let openModal = false;
 	let values = ["Problems", "Answers", "Solutions", "Comments"];
 	let group = values.slice(0, 1);
+
+	let scheme = {};
+
+	onMount(async () => {
+		// Fetch settings from the database
+		scheme = await fetchSettings();
+	});
 
 	(async () => {
 		try {
@@ -258,7 +266,7 @@
 
 			const resp = await fetch(
 				// make env variable before pushing
-				import.meta.env.VITE_PDF_GENERATOR_URL,
+				process.env.PDF_GENERATOR_URL,
 				{
 					method: "POST",
 					headers: {
@@ -328,7 +336,7 @@
 		{/each}
 	</div>
 </div>
-
+<!--
 <Button
 	action={() => {
 		openModal = !openModal;
@@ -336,6 +344,8 @@
 	title="Download All Problems"
 />
 <br /><br />
+-->
+<!--
 <Button
 	action={() => {
 		problemList.set(
@@ -346,25 +356,28 @@
 	}}
 	title="My Problems"
 />
-<br /><br />
+<br /><br />-->
+<!--
 <ul visibility: hidden>
 	{#each $messages as message}
 		<li>{message.role}: {message.content}</li>
 	{/each}
 </ul>
-<form on:submit={submitWrapper}>
-	<TextArea
-		class="textArea"
-		labelText="Use CASSIE to filter (Beta)!"
-		placeholder="Type some sort of command to filter (e.g. Show me all problems with difficulty harder than 4 and sort it hardest to easiest.). You can build queries off of the previous one."
-		bind:value={$input}
-		required={true}
-	/>
-	<br />
-	<Button type="submit" title="Apply Filter" />
-</form>
-<br />
+<div style="width:80%; margin: auto;margin-bottom: 20px;">
+	<form on:submit={submitWrapper}>
+		<TextArea
+			class="textArea"
+			labelText="Use CASSIE to filter (Beta)!"
+			placeholder="Type some sort of command to filter (e.g. Show me all problems with difficulty harder than 4 and sort it hardest to easiest.). You can build queries off of the previous one."
+			bind:value={$input}
+			required={true}
+		/>
+		<br />
+		<Button type="submit" title="Apply Filter" />
+	</form>
+</div>
 <Button action={resetProblems} title="Clear Filter" />
+-->
 <br /><br />
 <div style="width:80%; margin: auto;margin-bottom: 20px;">
 	<ProblemList {problems} />

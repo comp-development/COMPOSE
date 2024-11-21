@@ -21,6 +21,7 @@
 		10: "No permissions",
 		20: "Problem Contributor",
 		30: "Problem Writer",
+		33: "Endorser",
 		40: "Administrator",
 	};
 

@@ -1,6 +1,13 @@
 <script lang="ts">
 	import "carbon-components-svelte/css/white.css";
-	import scheme from "$lib/scheme.json";
+	import { defaultSettings, fetchSettings } from "$lib/supabase/settings";
+	import { onMount } from "svelte";
+	let scheme = defaultSettings;
+
+	onMount(async () => {
+		// Fetch settings from the database
+		scheme = await fetchSettings();
+	});
 </script>
 
 <div class="header">

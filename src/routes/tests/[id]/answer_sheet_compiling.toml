@@ -1,0 +1,6 @@
+# Placeholder file for Typst to distinguish between test compiling locally and
+# actually compiling on the website. Locally, we use some test data for preview,
+# but on the actual website, we use real problems and other assets in a VFS.
+
+[config]
+local = true

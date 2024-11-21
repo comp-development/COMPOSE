@@ -1,6 +1,9 @@
 import { getUser } from "$lib/supabase";
+import dotenv from 'dotenv';
 
-const discordToken = import.meta.env.VITE_BOT_TOKEN;
+dotenv.config()
+
+const discordToken = process.env.BOT_TOKEN;
 
 export async function POST({ request }) {
 	const body = await request.json();
@@ -8,7 +11,7 @@ export async function POST({ request }) {
 	//get user's discord ID
 	const user = await getUser(body.userId);
 	const discordId = user.discord_id;
-
+	console.log("discordToken", discordToken)
 	//Get the user DM
 	const response = await fetch(
 		`https://discord.com/api/v10/users/@me/channels`,

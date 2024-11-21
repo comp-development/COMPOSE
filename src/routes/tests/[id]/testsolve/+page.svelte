@@ -5,49 +5,55 @@
 		SelectItem,
 		DataTable,
 		Link,
+		MultiSelect,
 	} from "carbon-components-svelte";
 	import Loading from "$lib/components/Loading.svelte";
-	import Modal from "$lib/components/Modal.svelte";
+	import { formatDate } from "$lib/formatDate.js";
 	import Launch from "carbon-icons-svelte/lib/Launch.svelte";
+	import TestsolveList from "$lib/components/TestsolveList.svelte";
 	import Button from "$lib/components/Button.svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError.ts";
-	import { getTestInfo, getAllUsersOrder, getTestTestsolvers, removeTestsolver } from "$lib/supabase";
+	import {
+		getTestInfo,
+		getAllUsersOrder,
+		getTestTestsolvesDetailed,
+		addTestsolvers,
+		deleteTestsolve,
+		getSolverTestsolves,
+	} from "$lib/supabase";
 
 	let testId = $page.params.id;
 	let loading = true;
-	let selectRef;
-	let testsolvers;
+	let solver_ids = [];
+	let testsolves;
 	let test;
-	let allUsers = [];
+	let users = [];
 
-	let tableData = [];
+	console.log(testId, loading, solver_ids, testsolves, test, users);
 
 	async function getTest() {
 		try {
-			test = await getTestInfo(testId, "test_name");
-			getTestsolvers();
+			loading = true;
+			test = await getTestInfo(testId);
+			console.log("TEST", test);
+			getAllUsers();
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
 		}
 	}
 
-	async function getTestsolvers() {
+	async function onDelete(id) {
+		await deleteTestsolve(id);
+		await getTestsolves();
+	}
+
+	async function getTestsolves() {
 		try {
-			testsolvers = await getTestTestsolvers(testId, "solver_id,users(full_name,initials)");
-
-			testsolvers.forEach((user) => {
-				tableData.push({
-					id: user.solver_id,
-					testsolver: user.users.full_name + " (" + user.users.initials + ")",
-					status: "x",
-					testsolve: "x",
-					delete: user.solver_id,
-				});
-			});
-
-			getAllUsers();
+			console.log("got users");
+			testsolves = await getTestTestsolvesDetailed(testId);
+			loading = false;
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
@@ -56,38 +62,15 @@
 
 	async function getAllUsers() {
 		try {
-			const users = await getAllUsersOrder("full_name", "*,test_coordinators(*)");
-			allUsers = users.filter(
-				(x) => !testsolvers.some((ts) => ts.solver_id === x.id)
-			);
-			loading = false;
+			users = await getAllUsersOrder("full_name", "*,test_coordinators(*)");
+			console.log("got users");
+			getTestsolves();
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
 		}
 	}
-
 	getTest();
-
-	async function addTestsolver() {
-		try {
-			await addTestsolver({ test_id: testId, solver_id: selectRef.value });
-			getTestsolvers();
-		} catch (error) {
-			handleError(error);
-			toast.error(error.message);
-		}
-	}
-
-	async function deleteTestsolver(id) {
-		try {
-			await removeTestsolver(id);
-			getTestsolvers();
-		} catch (error) {
-			handleError(error);
-			toast.error(error.message);
-		}
-	}
 </script>
 
 <div style="padding: 10px">
@@ -98,54 +81,50 @@
 		<br />
 		<Button href={`/tests/${testId}`} title="Go back" />
 		<br /><br />
-		<h3><strong>Add Testsolvers</strong></h3>
+		<h3><strong>Add Testsolves</strong></h3>
 		<div class="flex">
 			<form on:submit|preventDefault style="width: 50%">
-				<Select bind:ref={selectRef}>
-					{#each allUsers as user}
-						<SelectItem
-							value={user.id}
-							text={user.full_name + " (" + user.initials + ")"}
-						/>
-					{/each}
-				</Select>
+				<MultiSelect
+					titleText="Testsolvers"
+					label="Select Testsolvers"
+					bind:selectedIds={solver_ids}
+					items={users.map((item) => ({
+						id: item.id,
+						text: item.full_name,
+					}))}
+				/>
 				<br />
-				<Button action={addTestsolver} title="Add Testsolver" />
+				<Button
+					action={async () => {
+						try {
+							console.log("USERS", solver_ids);
+							if (!solver_ids.length) {
+								toast.error("Please select a user");
+							} else {
+								const solvers = users.filter((obj) =>
+									solver_ids.includes(obj.id)
+								);
+								console.log("TEST", test);
+								console.log("SOLVERS", solvers);
+								await addTestsolvers(test, solvers);
+								toast.success("Success! Added testsolve.");
+								await getTestsolves();
+							}
+						} catch (error) {
+							handleError(error);
+							toast.error(error.message);
+						}
+					}}
+					title="Add Testsolve"
+				/>
 			</form>
 		</div>
 		<br /> <br />
-		<h3><strong>Current Testsolvers</strong></h3>
-		{#if testsolvers.length === 0}
-			<p>There are no testsolvers</p>
+		<h3><strong>Current Testsolves</strong></h3>
+		{#if testsolves.length === 0}
+			<p>There are no testsolves</p>
 		{:else}
-			<DataTable
-				sortable
-				size="compact"
-				pageSize={10}
-				headers={[
-					{ key: "testsolver", value: "Testsolver" },
-					{ key: "status", value: "Status" },
-					{ key: "testsolve", value: "Testsolve" },
-					{ key: "delete", value: "Delete" },
-				]}
-				rows={tableData}
-			>
-				<svelte:fragment slot="cell" let:row let:cell>
-					{#if cell.key === "testsolve"}
-						<Link icon={Launch} href="/testsolve/{cell.value}" target="_blank"
-							>{cell.value}</Link
-						>
-					{:else if cell.key === "delete"}
-						<Modal
-							runHeader="Remove testsolver"
-							del={true}
-							onSubmit={() => deleteTestsolver(cell.value)}
-						/>
-					{:else}
-						{cell.value}
-					{/if}
-				</svelte:fragment>
-			</DataTable>
+			<TestsolveList {onDelete} {testsolves} />
 		{/if}
 	{/if}
 </div>

@@ -12,7 +12,7 @@
 <Button href="/admin/tests" title="Tests" />
 <br />
 <br />
-<Button href="/manage-testsolves" title="Manage Testsolves" />
+<Button href="/admin/testsolves" title="Manage Testsolves" />
 <br />
 <br />
 <Button href="/admin/transfer-problem" title="Transfer Problem" />

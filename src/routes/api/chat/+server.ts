@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 import { OpenAIStream, StreamingTextResponse } from "ai";
+import dotenv from 'dotenv';
 
-import { env } from "$env/dynamic/private";
+dotenv.config()
 // You may want to replace the above with a static private env variable
 // for dead-code elimination and build-time type-checking:
 // import { OPENAI_API_KEY } from '$env/static/private'
@@ -10,7 +11,7 @@ import type { RequestHandler } from "./$types";
 
 // Create an OpenAI API client
 const openai = new OpenAI({
-	apiKey: env.VITE_OPENAI_API_KEY || "",
+	apiKey: process.env.OPENAI_API_KEY || "",
 });
 
 export const POST = (async ({ request }) => {

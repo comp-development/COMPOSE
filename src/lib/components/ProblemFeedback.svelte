@@ -1,5 +1,4 @@
 <script>
-	import PieChart from "./PieChart.svelte";
 	import Rating from "$lib/components/Rating.svelte";
 	import { Checkbox } from "carbon-components-svelte";
 	import {
@@ -18,8 +17,8 @@
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError.ts";
 	import {
-		addProblemTestsolveAnswer,
-		getProblemTestsolveAnswers,
+		addProblemFeedback,
+		getProblemFeedback,
 		updateTestsolveAnswer,
 	} from "$lib/supabase";
 	import Error from "../../routes/+error.svelte";
@@ -57,7 +56,7 @@
 
 	async function loadFeedback() {
 		try {
-			const data = await getProblemTestsolveAnswers(problem_id, "*,users(*)");
+			const data = await getProblemFeedback(problem_id, "*,users(*)");
 
 			// filter empty feedback
 			const totalFeedbackList = data.filter((fd) => !!fd.feedback);
@@ -180,7 +179,7 @@
 			answer == "" ? (answer = null) : (answer = answer);
 			console.log("QUAL", quality);
 			console.log("DIFF", difficulty);
-			await addProblemTestsolveAnswer([
+			await addProblemFeedback([
 				{
 					solver_id: solver_id,
 					problem_id: problem_id,
@@ -224,6 +223,7 @@
 			{/if}
 		</div>
 		<br /><br />
+		<!--
 		<div class="answerChart">
 			<h2>Submitted Answers</h2>
 
@@ -239,6 +239,7 @@
 				{/if}
 			{/if}
 		</div>
+		-->
 	</div>
 </div>
 <div class="flex">

@@ -2,7 +2,7 @@
 	import { page } from "$app/stores";
 	import Problem from "$lib/components/Problem.svelte";
 	import Button from "$lib/components/Button.svelte";
-	import Modal from "$lib/components/Modal.svelte";
+	import ModalButton from "$lib/components/ModalButton.svelte";
 	import ProblemFeedback from "$lib/components/ProblemFeedback.svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
@@ -14,15 +14,19 @@
 		getProblemTopics,
 		getProblem,
 		getThisUserRole,
+		fetchSettings,
+		makeProblemThread,
 	} from "$lib/supabase";
 
 	let problem;
 	let loaded = false;
 	let isAdmin = false;
 	let user;
+	let scheme = {};
 
 	(async () => {
 		user = await getThisUser();
+		scheme = await fetchSettings();
 	})();
 
 	async function fetchTopic(problem_id) {
@@ -51,6 +55,8 @@
 				loaded = true;
 				return;
 			}
+			
+			console.log("PROBLEM", problem)
 
 			await fetchTopic(problem.id);
 			loaded = true;
@@ -65,16 +71,17 @@
 		try {
 			await archiveProblem(problem.id);
 
-			const authorName = await getAuthorName(user.id);
-			await fetch("/api/discord-update", {
-				method: "POST",
-				body: JSON.stringify({
-					id: problem.id,
-					update: "deleted",
-					updater: authorName,
-				}),
-			});
-
+			/**
+			    const authorName = await getAuthorName(user.id);
+				await fetch("/api/discord-update", {
+					method: "POST",
+					body: JSON.stringify({
+						id: problem.id,
+						update: "deleted",
+						updater: authorName,
+					}),
+				});
+			*/
 			window.location.replace("/problems");
 		} catch (error) {
 			handleError(error);
@@ -97,22 +104,47 @@
 
 {#if loaded}
 	{#if problem}
-		<h1>Problem {problem.id} ({problem.front_id})</h1>
+		<h1>{#if problem.status == "Draft"}Draft{:else}Problem{/if} {problem.id} ({problem.front_id})</h1>
 		<br />
 		<Button href="/problems" title="Back to Problems" />
+		<br /><br />
+		<Button href={"/problems/" + problem.id + "/solve"} title="Testsolve Problem" />
 		<br /><br />
 		<Button href={"/problems/" + problem.id + "/edit"} title="Edit Problem" />
 		<br />
 		<br />
 		{#if problem.archived && isAdmin}
-			<Modal runHeader="Restore Problem" onSubmit={restoreLocalProblem} />
+			<ModalButton runHeader="Restore Problem" onSubmit={restoreLocalProblem} />
 			<br />
 			<br />
 		{:else if problem.author_id === user.id || isAdmin}
-			<Modal runHeader="Archive Problem" onSubmit={deleteProblem} />
+			<ModalButton runHeader="Archive Problem" onSubmit={deleteProblem} />
 			<br />
 			<br />
 		{/if}
+		{#if problem.discord_id}
+			<Button
+				href={"https://discord.com/channels/" + scheme.discord.guild_id + "/" + problem.discord_id}
+				title="Discord Thread"
+				classs="discordbutton"
+				newTab
+				fontSize="1em"
+				icon="fa-brands fa-discord"
+			/>
+		{:else}
+			<Button
+				action={async () => {
+					const newId = await makeProblemThread(problem);
+					if (newId) problem.discord_id = newId;
+				}}
+				title="Create Discord Thread"
+				classs="discordbutton"
+				fontSize="1em"
+				icon="fa-brands fa-discord"
+			/>
+		{/if}
+		<br />
+		<br />
 		<Problem {problem} showMetadata={true} />
 		<br />
 		<br />

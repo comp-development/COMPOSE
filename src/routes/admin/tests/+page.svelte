@@ -9,10 +9,13 @@
 	let tests = [];
 	let testsArchived = [];
 	let loading = true;
+	console.log("INIT");
 
 	async function getTests() {
 		try {
+			console.log("GETTING TESTS");
 			let testList = await getAllTests("*,tournaments(tournament_name)");
+			console.log("GOT TESTS");
 			for (let test of testList) {
 				tournaments[test.tournament_id].push(test);
 
@@ -28,7 +31,9 @@
 
 	async function getTournaments() {
 		try {
+			console.log("GETTING TOURN");
 			let tournamentList = await getAllTournaments();
+			console.log("GOT TOURN");
 			for (let tournament of tournamentList) {
 				tournaments[tournament.id] = [tournament.tournament_name];
 			}

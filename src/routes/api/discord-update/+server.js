@@ -1,15 +1,25 @@
 import { WebhookClient } from "discord.js";
-import scheme from "$lib/scheme.json";
+import {fetchSettings} from "$lib/supabase";
+import dotenv from 'dotenv';
+dotenv.config()
+
+let scheme = {};
+
+// Function to fetch settings
+async function loadSettings() {
+    scheme = await fetchSettings(); // Fetch settings from the database
+}
 
 export async function POST({ request }) {
-	let token = import.meta.env.VITE_CLIENT_TOKEN;
-	let id = import.meta.env.VITE_CLIENT_ID;
+	await loadSettings();
+	let token = process.env.BOT_TOKEN;
+	let id = process.env.VITE_CLIENT_ID;
 	const body = await request.json();
 
 	try {
 		const webhookClient = new WebhookClient({ id: id, token: token });
 
-		webhookClient.send({
+		await webhookClient.send({
 			username: "Problem Writing Platform",
 			avatarURL: scheme.logo,
 			content: body.updater + " " + body.update + " problem " + body.id,
@@ -20,7 +30,9 @@ export async function POST({ request }) {
 			headers: { "content-type": "application/text" },
 		});
 	} catch (e) {
-		return new Response(e.message, {
+		const message = "Error in updating discord webhook: " + e.message;
+		console.error(message)
+		return new Response(message, {
 			status: 400,
 		});
 	}

@@ -18,7 +18,9 @@
 
 	async function getTests() {
 		try {
-			const testList = await getUnarchivedTests("*,tournaments(tournament_name)");
+			const testList = await getUnarchivedTests(
+				"*,tournaments(tournament_name)"
+			);
 			let rowValues = [];
 
 			for (const test of testList) {

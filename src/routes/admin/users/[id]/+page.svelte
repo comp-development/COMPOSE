@@ -2,7 +2,7 @@
 	import { getUser, updateUserRole, getThisUser } from "$lib/supabase";
 	import { page } from "$app/stores";
 	import { Select, SelectItem, FormGroup } from "carbon-components-svelte";
-	import Modal from "$lib/components/Modal.svelte";
+	import ModalButton from "$lib/components/ModalButton.svelte";
 	import Loading from "$lib/components/Loading.svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError.ts";
@@ -17,6 +17,15 @@
 	(async () => {
 		thisUser = await getThisUser();
 	})();
+
+	let roleDictionary = {
+		0: "No role assigned",
+		10: "No permissions",
+		20: "Problem Contributor",
+		30: "Problem Writer",
+		33: "Endorser",
+		40: "Administrator",
+	};
 
 	async function fetchUser() {
 		try {
@@ -67,14 +76,12 @@
 		</p>
 		<FormGroup disabled={userId === thisUser.id}>
 			<Select labelText="Role" bind:selected={user.role}>
-				<SelectItem value="0" text="No role assigned (0)" />
-				<SelectItem value="10" text="No permissions (10)" />
-				<SelectItem value="20" text="Problem Contributor (20)" />
-				<SelectItem value="30" text="Problem Writer (30)" />
-				<SelectItem value="40" text="Administrator (40)" />
+				{#each Object.entries(roleDictionary) as [key, value]}
+					<SelectItem value={key} text={value + " (" + key + ")"} />
+				{/each}
 			</Select>
 			<br />
-			<Modal
+			<ModalButton
 				runHeader="Update Role"
 				onSubmit={async () => {
 					await addRoleToUser(user.role);

@@ -2,7 +2,7 @@
 	import { displayLatex } from "$lib/latexStuff";
 	import { ImageBucket } from "$lib/ImageBucket";
 	import toast from "svelte-french-toast";
-	import { handleError } from "$lib/handleError.ts";
+	import { handleError } from "$lib/handleError";
 	import { getAuthorName } from "$lib/supabase";
 
 	export let problem; // whole object from database
@@ -105,6 +105,9 @@
 				{/if}
 				{#if "sub_topics" in problem}
 					<p><span class="header">Sub-Topic: </span>{problem.sub_topics}</p>
+				{/if}
+				{#if "status" in problem}
+					<p><span class="header">Status: </span>{problem.status}</p>
 				{/if}
 				{#if "difficulty" in problem}
 					<p><span class="header">Difficulty: </span>{problem.difficulty}</p>

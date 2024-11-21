@@ -71,6 +71,7 @@
 			}));
 			selectedTest = testProblems.map((pb) => pb.id);
 			let allProblemList = await getProblems({ customSelect: "*" });
+			console.log("PROBLEMS", allProblemList);
 
 			// prevent problems from appearing twice
 			allProblems = allProblemList.filter(
@@ -243,40 +244,46 @@
 				</div>
 			</div>
 		</div>
-		<div class="flex-row">
-			<div class="flex-col">
-				<h3>All Problems</h3>
-				<ProblemList
-					problems={allProblems}
-					condensed
-					selectable
-					editable={false}
-					showUnresolved={false}
-					showSubtopic={false}
-					bind:selectedItems={selectedAll}
-					disableAll={refreshingProblems}
-				/>
-			</div>
-			<div class="flex-col">
-				<h3>Test Problems</h3>
-				<ProblemList
-					problems={testProblems}
-					condensed
-					selectable
-					draggable
-					editable={false}
-					pageEnabled={false}
-					showUnresolved={false}
-					showSubtopic={false}
-					bind:selectedItems={selectedTest}
-					disableAll={refreshingProblems}
-					customHeaders={[
-						{ key: "drag", value: "", sort: false },
-						{ key: "problem_number", value: "#" },
-					]}
-					on:reorder={handleReorder}
-				/>
-			</div>
+		<div class="flex-col">
+			<h3>Test Problems</h3>
+			<ProblemList
+				problems={testProblems}
+				selectable
+				draggable
+				sortKey={"problem_number"}
+				sortDirection={"ascending"}
+				pageEnabled={false}
+				showList={[
+					"topics_short",
+					"sub_topics",
+					"average_difficulty",
+					"average_quality",
+					"status",
+				]}
+				bind:selectedItems={selectedTest}
+				disableAll={refreshingProblems}
+				customHeaders={[
+					{ key: "drag", value: "", sort: false, width: "50px" },
+					{ key: "problem_number", value: "", icon: "ri-hashtag" },
+				]}
+				on:reorder={handleReorder}
+			/>
+		</div>
+		<div class="flex-col">
+			<h3>All Problems</h3>
+			<ProblemList
+				problems={allProblems}
+				selectable
+				showList={[
+					"topics_short",
+					"sub_topics",
+					"average_difficulty",
+					"average_quality",
+					"status",
+				]}
+				bind:selectedItems={selectedAll}
+				disableAll={refreshingProblems}
+			/>
 		</div>
 	{/if}
 {/if}
@@ -291,5 +298,9 @@
 	.flex-col {
 		width: 100%;
 		padding: 10px;
+	}
+
+	:global(.bx--table-expand) {
+		width: 3rem !important;
 	}
 </style>

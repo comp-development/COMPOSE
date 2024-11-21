@@ -6,8 +6,18 @@
 	export let icon = null;
 	export let href = null;
 	export let fontSize = "1em";
+	export let newTab = false;
 	export let buttonColor = null;
 	export let bwidth = "30em";
+
+	function openLink() {
+		if (newTab) {
+			window.open(href, '_blank', 'noopener,noreferrer');
+		} else {
+			window.location.href = href
+		}
+		
+	}
 </script>
 
 {#if href}
@@ -15,7 +25,7 @@
 		kind="primary"
 		class={classs}
 		size="small"
-		{href}
+		on:click={openLink}
 		type="submit"
 		style="width: {bwidth}; border-radius: 2.5em; margin: 0; padding: 0;"
 	>

@@ -1,5 +1,5 @@
 import { supabase } from "../supabaseClient";
-import { archiveTest } from "./tests";
+import { unarchiveTest, archiveTest } from "./tests";
 
 export interface TournamentRequest {
 	tournament_name: string;
@@ -43,6 +43,21 @@ export async function getAllTournamentsOrder(
 }
 
 /**
+ * Fetches the tournament info of all tournaments from the database
+ *
+ * @param customSelect optional, string
+ * @returns List of all tournaments from database
+ */
+export async function getAllTournamentsUnarchived(customSelect = "*") {
+	let { data, error } = await supabase
+		.from("tournaments")
+		.select(customSelect)
+		.eq("archived", false);
+	if (error) throw error;
+	return data;
+}
+
+/**
  * Returns tournament info object given tournament id
  *
  * @param tournament_id number
@@ -68,10 +83,13 @@ export async function getTournamentInfo(
  * @param tournament_id number
  * @returns list of test info objects
  */
-export async function getTournamentTests(tournament_id: number) {
+export async function getTournamentTests(
+	tournament_id: number,
+	customSelect: string = "*" // optional
+) {
 	let { data, error } = await supabase
 		.from("tests")
-		.select("*")
+		.select(customSelect)
 		.eq("tournament_id", tournament_id);
 	if (error) throw error;
 	return data;
@@ -145,5 +163,29 @@ export async function archiveTournament(tournament_id: number) {
 	let tests = await getTournamentTests(tournament_id);
 	for (let i of tests) {
 		archiveTest(i.id);
+	}
+}
+
+/**
+ * Archives the tournament, all tests, and all problems associated with the tournament id. Returns nothing.
+ *
+ * @param tournament_id number
+ */
+export async function unarchiveTournament(tournament_id: number) {
+	const { error: error1 } = await supabase
+		.from("tournaments")
+		.update({ archived: false })
+		.eq("id", tournament_id);
+	if (error1) throw error1;
+
+	const { error: error2 } = await supabase
+		.from("tests")
+		.update({ archived: false })
+		.eq("tournament_id", tournament_id);
+	if (error2) throw error2;
+
+	let tests = await getTournamentTests(tournament_id);
+	for (let i of tests) {
+		unarchiveTest(i.id);
 	}
 }

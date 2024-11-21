@@ -62,9 +62,15 @@
 			<Link href="/" class={path == "" ? "active link" : "link"}>
 				<p class="linkPara">Home</p>
 			</Link>
-			<br />
 			{#if userRole}
 				{#if userRole >= 20}
+					<div class="fixedHr" />
+					<Link
+						href="/dashboard"
+						class={path == "dashboard" ? "active link" : "link"}
+					>
+						<p class="linkPara">Dashboard</p>
+					</Link>
 					<Link
 						href="/problems/new"
 						class={path == "problems/new" ? "active link" : "link"}
@@ -72,6 +78,8 @@
 						<p class="linkPara">Write New Problem</p>
 					</Link>
 					<br />
+				{/if}
+				{#if userRole >= 30}
 					<Link
 						href="/problems"
 						class={path == "problems" ? "active link" : "link"}
@@ -80,70 +88,115 @@
 					</Link>
 					<br />
 					<Link
+						href="/problems/feedback"
+						class={path == "problems/feedback" ? "active link" : "link"}
+					>
+						<p class="linkPara">Give Feedback</p>
+					</Link>
+					{#if userRole >= 33}
+						<Link
+							href="/problems/endorse"
+							class={path == "problems/endorse" ? "active link" : "link"}
+						>
+							<p class="linkPara">Endorse Problems</p>
+						</Link>
+					{/if}
+					<Link href="/tests" class={path == "tests" ? "active link" : "link"}>
+						<p class="linkPara">View Tests</p>
+					</Link>
+				{/if}
+				{#if userRole >= 10}
+					<Link
+						href="/testsolve"
+						class={path == "testsolve" ? "active link" : "link"}
+					>
+						<p class="linkPara">View Testsolves</p>
+					</Link>
+					<div class="fixedHr" />
+					<Link
+						href="/grading"
+						class={path == "grading" ? "active link" : "link"}
+					>
+						<p class="linkPara">Grade Tests</p>
+					</Link>
+					<Link
+						href="/input-guts"
+						class={path == "input-guts" ? "active link" : "link"}
+					>
+						<p class="linkPara">Grade Guts Tests</p>
+					</Link>
+					<Link
+						href="/display-guts"
+						class={path == "display-guts" ? "active link" : "link"}
+					>
+						<p class="linkPara">Guts Live Scoreboard</p>
+					</Link>
+				{/if}
+				{#if isAdmin}
+					<div class="fixedHr" />
+					<Link
+						href="/admin/grading/upload"
+						class={path == "/admin/grading/upload" ? "active link" : "link"}
+					>
+						<p class="linkPara">Admin: Scans Upload</p>
+					</Link>
+					<br />
+					<Link
+						href="/admin/grading/resolve"
+						class={path == "/admin/grading/resolve" ? "active link" : "link"}
+					>
+						<p class="linkPara">Admin: Resolve Conflicts</p>
+					</Link>
+					<br />
+					<Link href="/admin" class={path == "admin" ? "active link" : "link"}>
+						<p class="linkPara">Admin: Home</p>
+					</Link>
+					<br />
+					<Link
+						href="/admin/users"
+						class={path == "admin/users" ? "active link" : "link"}
+					>
+						<p class="linkPara">Admin: Users</p>
+					</Link>
+					<br />
+					<Link
+						href="/admin/tests"
+						class={path == "admin/tests" ? "active link" : "link"}
+					>
+						<p class="linkPara">Admin: Tests</p>
+					</Link>
+					<br />
+					<Link
+						href="/admin/testsolves"
+						class={path == "/admin/testsolves" ? "active link" : "link"}
+					>
+						<p class="linkPara">Admin: Testsolves</p>
+					</Link>
+					<br />
+					<Link
+						href="/admin/transfer-problem"
+						class={path == "admin/transfer-problem" ? "active link" : "link"}
+					>
+						<p class="linkPara">Admin: Transfer Problem</p>
+					</Link>
+					<Link
 						href="/problems/import"
 						class={path == "problems/import" ? "active link" : "link"}
 					>
-						<p class="linkPara">Import Problems</p>
+						<p class="linkPara">Admin: Import Problems</p>
 					</Link>
 					<br />
+					<Link
+						href="/admin/tournaments"
+						class={path == "admin/tournaments" ? "active link" : "link"}
+					>
+						<p class="linkPara">Admin: Tournaments</p>
+					</Link>
 				{/if}
-				<Link
-					href="/testsolve"
-					class={path == "testsolve" ? "active link" : "link"}
-				>
-					<p class="linkPara">View Testsolves</p>
-				</Link>
-				<br />
-			{:else}
-				<br />
-				<p>You need to be verified to see other links.</p>
-			{/if}
-			{#if userRole >= 30}
-				<Link href="/tests" class={path == "tests" ? "active link" : "link"}>
-					<p class="linkPara">View Tests</p>
-				</Link>
-			{/if}
-			{#if isAdmin}
-				<br />
-				<div class="fixedHr" />
-				<Link href="/admin" class={path == "admin" ? "active link" : "link"}>
-					<p class="linkPara">Admin: Home</p>
-				</Link>
-				<br />
-				<Link
-					href="/admin/users"
-					class={path == "admin/users" ? "active link" : "link"}
-				>
-					<p class="linkPara">Admin: Users</p>
-				</Link>
-				<br />
-				<Link
-					href="/admin/tests"
-					class={path == "admin/tests" ? "active link" : "link"}
-				>
-					<p class="linkPara">Admin: Tests</p>
-				</Link>
-				<br />
-				<Link
-					href="/manage-testsolves"
-					class={path == "manage-testsolves" ? "active link" : "link"}
-				>
-					<p class="linkPara">Admin: Testsolves</p>
-				</Link>
-				<br />
-				<Link
-					href="/admin/transfer-problem"
-					class={path == "admin/transfer-problem" ? "active link" : "link"}
-				>
-					<p class="linkPara">Admin: Transfer Problem</p>
-				</Link>
-				<br />
-				<Link
-					href="/admin/tournaments"
-					class={path == "admin/tournaments" ? "active link" : "link"}
-				>
-					<p class="linkPara">Admin: Tournaments</p>
-				</Link>
+				{#if userRole < 10}
+					<br />
+					<p>You need to be verified to see other links.</p>
+				{/if}
 			{/if}
 			<br />
 			<div class="fixedHr" />

@@ -4,16 +4,17 @@
 	"logo": "https://www.stanfordmathtournament.com/SMT%20White.png",
 	"description": "The Stanford Math Tournament [SMT] is a high school math tournament run by students at Stanford University. We are passionate about providing a high quality and challenging event to students interested in mathematics globally.",
 	"url": "https://compose.stanfordmathtournament.com",
+	"test_logo": "https://i.postimg.cc/PxkgYTY8/smt-logo.png",
 	"discord": {
 		"guild_id": "968089252107792444",
-		"embed_color": "0x65c083",
-		"thread_channel": "1182668103130296420",
-		"notifs_channel": "1182668043399221308",
-		"notifs_forum": "1182668248089624587"
-  },
+		"embed_color": "0xdc7291",
+		"thread_channel": "1167741704175099955",
+		"notifs_channel": "1167741704175099955",
+		"notifs_forum": "1191688676833493033"
+	},
 	"progress": {
-		"after": "2023-10-29T13:00:00Z",
-		"before": "2024-03-01T00:00:00Z",
+		"after": "2023-10-29T20:00:00Z",
+		"before": "2024-04-13T00:00:00Z",
 		"goal": 120
 	},
 	"styles": {
@@ -30,5 +31,16 @@
 		"secondary-dark": "#485445",
 		"secondary-tint": "#e3f2df",
 		"font-family": "Source Sans Pro"
+	},
+	"constants": {
+		"white": "#fff",
+		"incorrect": "#ff9999",
+		"incorrect-text": "#AD2828",
+		"unsure": "#FFFB99",
+		"unsure-text": "#7C7215",
+		"correct": "#9BFF99",
+		"correct-text": "#157C20",
+		"return": "#999999",
+		"return-text": "#282828"
 	}
 }

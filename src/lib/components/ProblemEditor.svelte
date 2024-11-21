@@ -21,6 +21,7 @@
 
 	export let originalProblem = null;
 	export let originalImages = [];
+	export let onDirty = () => {};
 
 	// function that has the payload as argument, runs when submit button is pressed.
 	// if not passed in, submit button is not shown
@@ -145,11 +146,12 @@
 	}
 	getTopics();
 
-	async function submitPayload() {
+	async function submitPayload(isDraft = false) {
 		try {
+			isDisabled = true
 			if (
 				fields.problem &&
-				fields.comment &&
+				//fields.comment &&
 				fields.answer &&
 				fields.solution &&
 				topics
@@ -159,6 +161,10 @@
 				} else if (problemFiles.some((f) => f.size > fileSizeLimit)) {
 					throw new Error("File too large");
 				} else {
+					console.log("OGSTATUS", originalProblem?.status)
+					console.log(isDraft)
+					const status = (isDraft ? "Draft" : (originalProblem?.status == "Draft" || !originalProblem?.status ? "Idea" : originalProblem?.status))
+					console.log("STATUS", status)
 					const payload = {
 						problem_latex: fields.problem,
 						comment_latex: fields.comment,
@@ -169,13 +175,14 @@
 						difficulty: difficulty ? parseInt(difficulty) : 0,
 						edited_at: new Date().toISOString(),
 						problem_files: problemFiles,
+						status: status,
 					};
 					submittedText = "Submitting problem...";
 					await onSubmit(payload);
-					submittedText = "Problem submitted.";
+					submittedText = isDraft ? "Draft Saved" : "Problem Submitted";
 				}
 			} else {
-				throw new Error("Not all the fields have been filled out");
+				throw new Error("Not all the required fields have been filled out");
 			}
 		} catch (error) {
 			handleError(error);
@@ -205,12 +212,14 @@
 						style="margin-right: 20px;"
 						placeholder="Sub-Topic (optional)"
 						class="textInput"
+						on:input={onDirty}
 					/>
 					<TextInput
 						bind:value={difficulty}
 						type="number"
 						placeholder="Difficulty (optional)"
 						class="textInput"
+						on:input={onDirty}
 					/>
 				</FormGroup>
 				<div style="position: relative;">
@@ -221,6 +230,7 @@
 						bind:ref={fieldrefs.problem}
 						on:input={updateFields}
 						required={true}
+						on:input={onDirty}
 					/>
 					<div style="position: absolute; top: 5px; right: 5px;">
 						{#if show}
@@ -253,7 +263,7 @@
 						labelText="Answer"
 						bind:value={fields.answer}
 						bind:ref={fieldrefs.answer}
-						on:input={updateFields}
+						on:input={() => {updateFields(); onDirty();}}
 						required={true}
 					/>
 					<div style="position: absolute; top: 5px; right: 5px;">
@@ -287,7 +297,7 @@
 						labelText="Solution"
 						bind:value={fields.solution}
 						bind:ref={fieldrefs.solution}
-						on:input={updateFields}
+						on:input={() => {updateFields(); onDirty();}}
 						required={true}
 					/>
 					<div style="position: absolute; top: 5px; right: 5px;">
@@ -321,7 +331,7 @@
 						labelText="Comments"
 						bind:value={fields.comment}
 						bind:ref={fieldrefs.comment}
-						on:input={updateFields}
+						on:input={() => {updateFields(); onDirty();}}
 						required={true}
 					/>
 					<div style="position: absolute; top: 5px; right: 5px;">
@@ -362,12 +372,24 @@
 					type="submit"
 					size="small"
 					disabled={isDisabled || problemFailed}
-					on:click={submitPayload}
+					on:click={() => {submitPayload()}}
 					style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0;"
 				>
 					<p>Submit Problem</p>
-				</Button>
-
+				</Button><br><br>
+				{#if !originalProblem || originalProblem?.status == "Draft"}
+					<Button
+						kind="tertiary"
+						class="button"
+						type="submit"
+						size="small"
+						disabled={isDisabled || problemFailed}
+						on:click={() => {submitPayload(true)}}	
+						style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0;"
+					>
+						<p>Save Draft</p>
+					</Button>
+				{/if}
 				<p>{submittedText}</p>
 				<br />
 			{/if}
