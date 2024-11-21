@@ -21,9 +21,12 @@
 	let math_comp_background;
 	let amc_score;
 
+	let user_id;
+
 	user.subscribe(async (v) => {
 		try {
-			data = await getUser(v.id);
+			user_id = v.id;
+			data = await getUser(user_id);
 			({
 				full_name,
 				discord,
@@ -48,7 +51,8 @@
 	});
 
 	function discordAuth() {
-		window.location.replace(`/api/linked-role?userId=${user.id}`);
+		console.log("user", user_id);
+		window.location.replace(`/api/linked-role?userId=${user_id}`);
 	}
 
 	async function updateProfile(e) {
