@@ -57,7 +57,7 @@
 		<div class="loadingPage flex">
 			<Loading />
 		</div>
-	{:else if !$user && hasAccount && $page.route.id != "/password-reset"}
+	{:else if !$user && hasAccount && $page.route.id != "/password-request"}
 		<Banner />
 		<br />
 		<div class="flex">
@@ -78,7 +78,7 @@
 							}}>Sign-Up</button
 						>
 						<button size="lg" class="link" id="forgotPassword"
-							><a href="/password-reset" style="color: black;"
+							><a href="/password-request" style="color: black;"
 								>Forgot Password</a
 							></button
 						>
@@ -86,7 +86,7 @@
 				</div>
 			</div>
 		</div>
-	{:else if !$user && !hasAccount && $page.route.id != "/password-reset"}
+	{:else if !$user && !hasAccount && $page.route.id != "/password-request"}
 		<Banner />
 		<br />
 		<div class="flex">
@@ -109,7 +109,7 @@
 							Log-In
 						</button>
 						<button size="lg" class="link" id="forgotPassword"
-							><a href="/password-reset" style="color: black;"
+							><a href="/password-request" style="color: black;"								
 								>Forgot Password</a
 							></button
 						>

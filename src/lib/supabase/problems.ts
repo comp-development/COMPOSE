@@ -300,7 +300,11 @@ export async function createProblem(payload: ProblemRequest) {
 
 	console.log("PROBLEM", problem);
 	console.log("DATA", data);
-	await makeProblemThread(problem);
+	console.log("STATUS", problem.status)
+
+	if (problem.status != "Draft"){
+		await makeProblemThread(problem);
+	}
 
 	return problem;
 }
