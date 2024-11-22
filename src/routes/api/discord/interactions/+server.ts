@@ -117,6 +117,7 @@ async function handleCommand(interaction) {
 			return new JsonResponse({
 				type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
 				data: {
+					flags: 64
 					content: "Pong!",
 					flags: 64,
 					components: [{
