@@ -3,6 +3,7 @@ import { supabase } from "$lib/supabaseClient"; // Your Supabase client initiali
 export const defaultSettings = {
 	logo: "/logo.png",
 	title: "",
+	description: "",
 };
 
 let cachedSettings = null;
