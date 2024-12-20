@@ -1,0 +1,19 @@
+{
+  "name": "supabase_local_dev",
+  "version": "1.0.0",
+  "description": "Supabase schema and dev instructions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@snaplet/copycat": "^5.1.0",
+    "@snaplet/seed": "^0.98.0",
+    "@types/node": "^22.8.1",
+    "@types/pg": "^8.11.10",
+    "pg": "^8.13.0"
+  }
+}
