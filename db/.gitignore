@@ -1,0 +1,5 @@
+node_modules
+.snaplet/dataModel.json
+supabase/.temp
+supabase/seed.sql
+supabase/.branches/_current_branch
