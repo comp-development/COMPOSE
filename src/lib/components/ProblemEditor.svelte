@@ -1,4 +1,5 @@
 <script>
+// <script context="module">
 	import {
 		MultiSelect,
 		TextInput,
@@ -18,10 +19,15 @@
 	import ImageManager from "$lib/components/images/ImageManager.svelte";
 	import { handleError } from "$lib/handleError.ts";
 	import { getGlobalTopics } from "$lib/supabase";
+	import { supabase } from "$lib/supabaseClient";
+	// import { diffWords } from 'diff';
+	import DiffMatchPatch from "diff-match-patch"; 
 
 	export let originalProblem = null;
 	export let originalImages = [];
 	export let onDirty = () => {};
+
+	export let diffs;
 
 	// function that has the payload as argument, runs when submit button is pressed.
 	// if not passed in, submit button is not shown
@@ -91,11 +97,260 @@
 		fields[fieldName] += fieldValue;
 	}
 
+	// export function recordDiff(original = '', edited = '') {
+    // 	return diffWords(original, edited).map(part => {
+    //     	if (part.added) {
+    //         	return `<span style="color: green;">${part.value}</span>`; // Highlight new text in green
+    //    		} else if (part.removed) {
+    //         	return `<span style="text-decoration: line-through; color: red;">${part.value}</span>`; // Strike-through deleted text
+    //     	} else {
+    //         	return `<span>${part.value}</span>`; // Keep unchanged text
+    //     	}
+    // 	}).join('');
+	// }
+
+	const dmp = new DiffMatchPatch();
+
+	let problemHistory = []; // [{ version: { problem: "", comment: "", answer: "", solution: "" } }];
+	const saveInterval = 5; // save full version every few times
+	let currentVersionIndex = 0;
+
+	let allVersions = [];
+
+// Function to save a new version or patch to Supabase
+async function saveVersionToSupabase() {
+    try {
+        const { data, error } = await supabase
+            .from("problems")
+            .update({ diffs: problemHistory })
+			.eq('id', originalProblem.id);
+        if (error) throw error;
+        console.log("Version saved:", data);
+    } catch (err) {
+        console.error("Failed to save version to Supabase:", err.message);
+    }
+}
+
+// Function to retrieve version history from Supabase
+async function fetchVersionHistoryFromSupabase() {
+    try {
+        const { data, error } = await supabase
+            .from("problems")
+            .select("diffs") // Assuming the `diffs` column stores patches or full versions
+			.eq('id', originalProblem.id)
+			.single();
+        if (error) throw error;
+        return data.diffs;
+    } catch (err) {
+        console.error("Failed to fetch version history from Supabase:", err.message);
+        return null;
+    }
+}
+
+async function addVersion() {
+	
+	console.log(fields);
+
+    const newVersion = {
+		problem: fields.problem,
+		comment: fields.comment,
+		answer: fields.answer,
+		solution: fields.solution,
+		kind: "version"
+    };
+
+	console.log("here", JSON.stringify(problemHistory));
+
+	if (problemHistory.length == 0)
+	{
+		problemHistory.push(newVersion);
+		await saveVersionToSupabase();
+		return;
+	}
+
+	if (problemHistory.length % saveInterval == 0) {
+    	problemHistory.push(newVersion);
+		await saveVersionToSupabase();
+		return;
+	}
+
+	// console.log(problemHistory.length);
+	// const lastVersion = problemHistory[problemHistory.length - 1].version; 
+	let lastVersion = structuredClone(problemHistory[problemHistory.length - 1]);
+
+	if (lastVersion.kind == "patch") //checks if it's a patch object (as opposed to a version object)
+	{
+		const reconstructedVersion = getVersion(problemHistory.length - 1);
+		console.log("reconstructed", reconstructedVersion);
+		lastVersion = reconstructedVersion;
+	}
+
+    /* if (!lastVersion) {
+      console.error("No previous version found.");
+      return;
+    } */
+
+	console.log("hi", lastVersion);
+	console.log("bonjour", newVersion);
+
+	// lastVersion = lastVersion.version;
+
+    const diffs = {
+    	problem: dmp.diff_main(lastVersion.problem, newVersion.problem),
+    	comment: dmp.diff_main(lastVersion.comment, newVersion.comment),
+    	answer: dmp.diff_main(lastVersion.answer, newVersion.answer),
+    	solution: dmp.diff_main(lastVersion.solution, newVersion.solution),
+    };
+
+    dmp.diff_cleanupSemantic(diffs.problem);
+    dmp.diff_cleanupSemantic(diffs.comment);
+    dmp.diff_cleanupSemantic(diffs.answer);
+    dmp.diff_cleanupSemantic(diffs.solution);
+
+    const patch = {
+    	problem: dmp.patch_make(lastVersion.problem, diffs.problem),
+    	comment: dmp.patch_make(lastVersion.comment, diffs.comment),
+    	answer: dmp.patch_make(lastVersion.answer, diffs.answer),
+    	solution: dmp.patch_make(lastVersion.solution, diffs.solution),
+		kind: "patch"
+    };
+
+    /* if (problemHistory.length % saveInterval === 0) {
+    	problemHistory.push({ version: newVersion });
+		saveVersionToSupabase({ version: newVersion });
+    } else { */
+
+	console.log("hi1.5", JSON.stringify(problemHistory));
+
+    problemHistory.push(patch);
+	await saveVersionToSupabase();
+
+	console.log("hi2", JSON.stringify(problemHistory));
+
+    currentVersionIndex = problemHistory.length - 1;
+}
+
+// Function to repopulate `problemHistory` from Supabase
+async function loadHistoryFromSupabase() {
+	console.log("field", fields);
+	const history = (await fetchVersionHistoryFromSupabase()) ?? [];
+	console.log("hello", JSON.stringify(history));
+    problemHistory = history;
+    allVersions = showEditHistory(problemHistory); // Reconstruct full versions for display
+}
+
+// Call `loadHistoryFromSupabase` when the component mounts
+onMount(() => {
+	loadHistoryFromSupabase();
+});
+
+// Reconstruct the full version from patches
+function getVersion(versionIndex) {
+
+	console.log("hi");
+	console.log(problemHistory.length);
+    if (versionIndex < 0 || versionIndex >= problemHistory.length) {
+      return {
+        problem: "",
+        comment: "",
+        answer: "",
+        solution: "",
+      };
+    }
+
+	let startIndex = versionIndex - versionIndex % saveInterval;
+    let reconstructed = structuredClone(problemHistory[startIndex]);
+
+    for (let i = startIndex + 1; i <= versionIndex; i++) {
+    	const patch = problemHistory[i];
+		
+		// reconstructed = problemHistory[index - 1].version; 
+
+        reconstructed.problem = dmp.patch_apply(patch.problem, reconstructed.problem)[0];
+        reconstructed.comment = dmp.patch_apply(patch.comment, reconstructed.comment)[0];
+        reconstructed.answer = dmp.patch_apply(patch.answer, reconstructed.answer)[0];
+        reconstructed.solution = dmp.patch_apply(patch.solution, reconstructed.solution)[0];
+      }
+
+    return reconstructed;
+}
+
+ /* function showEditHistory() {
+    const historyItems = problemHistory.map((history, index) => {
+      const previousVersion = getVersion(index - 1);
+      const currentVersion = getVersion(index);
+
+      const diffs = {
+        problem: dmp.diff_main(previousVersion.problem, currentVersion.problem),
+        comment: dmp.diff_main(previousVersion.comment, currentVersion.comment),
+        answer: dmp.diff_main(previousVersion.answer, currentVersion.answer),
+        solution: dmp.diff_main(previousVersion.solution, currentVersion.solution),
+      };
+
+      dmp.diff_cleanupSemantic(diffs.problem);
+      dmp.diff_cleanupSemantic(diffs.comment);
+      dmp.diff_cleanupSemantic(diffs.answer);
+      dmp.diff_cleanupSemantic(diffs.solution);
+
+      return { index, diffs };
+    });
+
+    return historyItems;
+  } */
+
+function showEditHistory(problemHistory) {
+
+	let reconstructed = {
+		problem: "",
+    	comment: "",
+    	answer: "",
+    	solution: ""
+    };
+
+	let reconstructedVersions = [];
+    problemHistory.forEach((historyItem, index) => {
+		console.log(historyItem);
+    	if (historyItem.kind == "version") {
+      		reconstructed = structuredClone(historyItem);
+    	} else if (historyItem.kind == "patch") {
+      		const patch = historyItem;
+
+      		reconstructed.problem = applyPatch(reconstructed.problem, patch.problem);
+      		reconstructed.comment = applyPatch(reconstructed.comment, patch.comment);
+      		reconstructed.answer = applyPatch(reconstructed.answer, patch.answer);
+      		reconstructed.solution = applyPatch(reconstructed.solution, patch.solution);	
+    	}
+		reconstructedVersions.push(structuredClone(reconstructed));
+    });
+
+  return reconstructedVersions;
+}
+
+// Helper function to apply a patch to a string
+function applyPatch(originalText, diff) {
+	// 'dmp.diff_apply' returns an array where the first element is the updated text
+	const result = dmp.patch_apply(diff, originalText);
+	return result[0];
+}
+
+function recordDiff(original = '', edited = '') {
+    return dmp.diff_main(original, edited).map(part => {
+      if (part.added) {
+        return `<span style="color: green;">${part.value}</span>`; // Highlight new text in green
+      } else if (part.removed) {
+        return `<span style="text-decoration: line-through; color: red;">${part.value}</span>`; // Strike-through deleted text
+      } else {
+        return `<span>${part.value}</span>`; // Keep unchanged text
+      }
+    }).join('');
+}
+
 	function updateFields() {
 		try {
 			errorList = [];
 			let failed = false;
 			doRender = false;
+
 			for (const field of fieldList) {
 				const fieldErrors = checkLatex(fields[field], field);
 				fieldErrors.forEach((x) => (x.field = field));
@@ -103,13 +358,39 @@
 				for (const err of fieldErrors) {
 					if (err.sev === "err") failed = true;
 				}
-			}
 
+				// if (fields[field] !== originalProblem[field]) {
+				// 	hasChanges = true;
+				// 	diffFields[field] = recordDiff(originalProblem[field], fields[field]);
+				// } else {
+				// 	diffFields[field] = fields[field];
+				// } *causes error with the latex on the side
+			}
 			if (failed) {
 				isDisabled = true;
 			} else {
+				/* const newVersion = {
+        			problem: fields.problem,
+        			comment: fields.comment,
+        			answer: fields.answer,
+        			solution: fields.solution,
+        			timestamp: new Date().toISOString() // to track when the version was created
+      			}; */
+
+     			// problemHistory.push({ version: newVersion });
+
+				/* addVersion();
+				allVersions = showEditHistory(problemHistory); */
+
 				for (const field of fieldList) {
 					latexes[field + "_latex"] = fields[field];
+
+					// addVersion(fields.problem);	
+
+					/* if (field == "problem")
+					{
+						addVersion(fields.problem);		
+					} */
 				}
 				// force reactivity
 				latexes = latexes;
@@ -151,7 +432,7 @@
 			isDisabled = true
 			if (
 				fields.problem &&
-				//fields.comment &&
+				fields.comment &&
 				fields.answer &&
 				fields.solution &&
 				topics
@@ -177,8 +458,13 @@
 						problem_files: problemFiles,
 						status: status,
 					};
+
+					addVersion();
+					allVersions = showEditHistory(problemHistory);
+
 					submittedText = "Submitting problem...";
 					await onSubmit(payload);
+					// allVersions = showEditHistory(problemHistory);
 					submittedText = isDraft ? "Draft Saved" : "Problem Submitted";
 				}
 			} else {
@@ -189,6 +475,12 @@
 			toast.error(error.message);
 		}
 	}
+	import { onMount } from "svelte";
+
+	/* let allVersions = [];
+	onMount(() => {
+  		allVersions = showEditHistory(problemHistory); // Call and store the result
+	}); */
 </script>
 
 <svelte:window on:click={updateActive} />
@@ -359,6 +651,23 @@
 				{/if}
 				<br />
 				<ImageManager add={addToField} />
+
+				<div class="editHistory">
+					<h3>Edit History:</h3>
+					{#if allVersions && allVersions.length > 0}
+						{#each allVersions as version, index}
+					  		<div class="version" style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
+							<h4>Version {index + 1}</h4>
+							<p><strong>Problem:</strong> {version.problem}</p>
+							<p><strong>Comment:</strong> {version.comment}</p>
+							<p><strong>Answer:</strong> {version.answer}</p>
+							<p><strong>Solution:</strong> {version.solution}</p>
+					  		</div>
+						{/each}
+					{:else}
+  						<p>No versions available</p>
+					{/if}
+				  </div>
 			</Form>
 		</div>
 
@@ -480,4 +789,50 @@
 		font-size: 15px;
 		padding: 0;
 	}
+	.editHistory {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+  }
+
+  .version {
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 5px;
+  }
+
+  h4 {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+
+  p {
+    margin: 5px 0;
+  }
+	  /* Styling for added and removed text */
+	.added {
+    	color: green;
+    	font-weight: bold;
+  	}
+  	.removed {
+    	color: red;
+    	text-decoration: line-through;
+  	}
+
+  	.editHistory {
+    	margin-top: 20px;
+    	background: #f5f5f5;
+    	padding: 10px;
+    	border-radius: 5px;
+  	}
+
+  	.historyItem {
+    	margin-bottom: 15px;
+  	}
+
+  	.diffContent {
+    	padding-left: 20px;
+  	}
 </style>
