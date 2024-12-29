@@ -109,13 +109,13 @@
     // 	}).join('');
 	// }
 
-	const dmp = new DiffMatchPatch();
+const dmp = new DiffMatchPatch();
 
-	let problemHistory = []; // [{ version: { problem: "", comment: "", answer: "", solution: "" } }];
-	const saveInterval = 5; // save full version every few times
-	let currentVersionIndex = 0;
+let problemHistory = []; // versions and patches
+const saveInterval = 5; // save full version every few times
+let currentVersionIndex = 0;
 
-	let allVersions = [];
+let allVersions = []; // contains reconstructed full versions
 
 // Function to save a new version or patch to Supabase
 async function saveVersionToSupabase() {
@@ -136,7 +136,7 @@ async function fetchVersionHistoryFromSupabase() {
     try {
         const { data, error } = await supabase
             .from("problems")
-            .select("diffs") // Assuming the `diffs` column stores patches or full versions
+            .select("diffs")
 			.eq('id', originalProblem.id)
 			.single();
         if (error) throw error;
@@ -147,22 +147,62 @@ async function fetchVersionHistoryFromSupabase() {
     }
 }
 
+// Function to repopulate `problemHistory` from Supabase
+async function loadHistoryFromSupabase() {
+	const history = (await fetchVersionHistoryFromSupabase()) ?? [];
+    problemHistory = history;
+    allVersions = showEditHistory(problemHistory); // Reconstruct full versions for display
+}
+
+// Call `loadHistoryFromSupabase` when the component mounts
+onMount(() => {
+	loadHistoryFromSupabase();
+});
+
+async function getCurrentUser() {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+        console.error("Failed to get user:", error.message);
+        return "unknown";
+    }
+    return data?.user || "unknown";
+}
+
+async function getPacificTime() {
+    const now = new Date();
+
+    const options = {
+        timeZone: "America/Los_Angeles",
+        year: "2-digit", // Two-digit year
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true, // Use 12-hour format
+    };
+
+    const pacificTime = new Intl.DateTimeFormat("en-US", options).format(now);
+
+    const [date, time] = pacificTime.split(", ");
+    return `${date} at ${time}`;
+}
+
 async function addVersion() {
-	
-	console.log(fields);
+
+	const user = await getCurrentUser();
+	const date = await getPacificTime();
 
     const newVersion = {
 		problem: fields.problem,
 		comment: fields.comment,
 		answer: fields.answer,
 		solution: fields.solution,
-		kind: "version"
+		kind: "version",
+		author: user.email,
+		timestamp: date
     };
 
-	console.log("here", JSON.stringify(problemHistory));
-
-	if (problemHistory.length == 0)
-	{
+	if (problemHistory.length == 0) {
 		problemHistory.push(newVersion);
 		await saveVersionToSupabase();
 		return;
@@ -174,26 +214,17 @@ async function addVersion() {
 		return;
 	}
 
-	// console.log(problemHistory.length);
-	// const lastVersion = problemHistory[problemHistory.length - 1].version; 
 	let lastVersion = structuredClone(problemHistory[problemHistory.length - 1]);
 
-	if (lastVersion.kind == "patch") //checks if it's a patch object (as opposed to a version object)
+	if (lastVersion.kind == "patch")
 	{
 		const reconstructedVersion = getVersion(problemHistory.length - 1);
-		console.log("reconstructed", reconstructedVersion);
+		// console.log("reconstructed", reconstructedVersion);
 		lastVersion = reconstructedVersion;
 	}
 
-    /* if (!lastVersion) {
-      console.error("No previous version found.");
-      return;
-    } */
-
-	console.log("hi", lastVersion);
-	console.log("bonjour", newVersion);
-
-	// lastVersion = lastVersion.version;
+	// console.log("last", lastVersion);
+	// console.log("new", newVersion);
 
     const diffs = {
     	problem: dmp.diff_main(lastVersion.problem, newVersion.problem),
@@ -212,50 +243,29 @@ async function addVersion() {
     	comment: dmp.patch_make(lastVersion.comment, diffs.comment),
     	answer: dmp.patch_make(lastVersion.answer, diffs.answer),
     	solution: dmp.patch_make(lastVersion.solution, diffs.solution),
-		kind: "patch"
+		kind: "patch",
+		author: user.email,
+		timestamp: date
     };
-
-    /* if (problemHistory.length % saveInterval === 0) {
-    	problemHistory.push({ version: newVersion });
-		saveVersionToSupabase({ version: newVersion });
-    } else { */
-
-	console.log("hi1.5", JSON.stringify(problemHistory));
 
     problemHistory.push(patch);
 	await saveVersionToSupabase();
 
-	console.log("hi2", JSON.stringify(problemHistory));
+	// console.log("stringify", JSON.stringify(problemHistory));
 
     currentVersionIndex = problemHistory.length - 1;
 }
 
-// Function to repopulate `problemHistory` from Supabase
-async function loadHistoryFromSupabase() {
-	console.log("field", fields);
-	const history = (await fetchVersionHistoryFromSupabase()) ?? [];
-	console.log("hello", JSON.stringify(history));
-    problemHistory = history;
-    allVersions = showEditHistory(problemHistory); // Reconstruct full versions for display
-}
-
-// Call `loadHistoryFromSupabase` when the component mounts
-onMount(() => {
-	loadHistoryFromSupabase();
-});
-
-// Reconstruct the full version from patches
+// Reconstruct a full version from patches
 function getVersion(versionIndex) {
 
-	console.log("hi");
-	console.log(problemHistory.length);
     if (versionIndex < 0 || versionIndex >= problemHistory.length) {
-      return {
-        problem: "",
-        comment: "",
-        answer: "",
-        solution: "",
-      };
+    	return {
+        	problem: "",
+        	comment: "",
+        	answer: "",
+        	solution: ""
+      	};
     }
 
 	let startIndex = versionIndex - versionIndex % saveInterval;
@@ -263,8 +273,6 @@ function getVersion(versionIndex) {
 
     for (let i = startIndex + 1; i <= versionIndex; i++) {
     	const patch = problemHistory[i];
-		
-		// reconstructed = problemHistory[index - 1].version; 
 
         reconstructed.problem = dmp.patch_apply(patch.problem, reconstructed.problem)[0];
         reconstructed.comment = dmp.patch_apply(patch.comment, reconstructed.comment)[0];
@@ -275,36 +283,15 @@ function getVersion(versionIndex) {
     return reconstructed;
 }
 
- /* function showEditHistory() {
-    const historyItems = problemHistory.map((history, index) => {
-      const previousVersion = getVersion(index - 1);
-      const currentVersion = getVersion(index);
-
-      const diffs = {
-        problem: dmp.diff_main(previousVersion.problem, currentVersion.problem),
-        comment: dmp.diff_main(previousVersion.comment, currentVersion.comment),
-        answer: dmp.diff_main(previousVersion.answer, currentVersion.answer),
-        solution: dmp.diff_main(previousVersion.solution, currentVersion.solution),
-      };
-
-      dmp.diff_cleanupSemantic(diffs.problem);
-      dmp.diff_cleanupSemantic(diffs.comment);
-      dmp.diff_cleanupSemantic(diffs.answer);
-      dmp.diff_cleanupSemantic(diffs.solution);
-
-      return { index, diffs };
-    });
-
-    return historyItems;
-  } */
-
 function showEditHistory(problemHistory) {
 
 	let reconstructed = {
 		problem: "",
     	comment: "",
     	answer: "",
-    	solution: ""
+    	solution: "",
+		author: "",
+		timestamp: ""
     };
 
 	let reconstructedVersions = [];
@@ -319,6 +306,8 @@ function showEditHistory(problemHistory) {
       		reconstructed.comment = applyPatch(reconstructed.comment, patch.comment);
       		reconstructed.answer = applyPatch(reconstructed.answer, patch.answer);
       		reconstructed.solution = applyPatch(reconstructed.solution, patch.solution);	
+			reconstructed.author = patch.author;
+			reconstructed.timestamp = patch.timestamp;
     	}
 		reconstructedVersions.push(structuredClone(reconstructed));
     });
@@ -459,12 +448,11 @@ function recordDiff(original = '', edited = '') {
 						status: status,
 					};
 
-					addVersion();
-					allVersions = showEditHistory(problemHistory);
+					await addVersion();
+					allVersions = showEditHistory(problemHistory); // !!! Can definitely make more efficient (all the past versions are already displayed)
 
 					submittedText = "Submitting problem...";
 					await onSubmit(payload);
-					// allVersions = showEditHistory(problemHistory);
 					submittedText = isDraft ? "Draft Saved" : "Problem Submitted";
 				}
 			} else {
@@ -477,10 +465,6 @@ function recordDiff(original = '', edited = '') {
 	}
 	import { onMount } from "svelte";
 
-	/* let allVersions = [];
-	onMount(() => {
-  		allVersions = showEditHistory(problemHistory); // Call and store the result
-	}); */
 </script>
 
 <svelte:window on:click={updateActive} />
@@ -655,13 +639,13 @@ function recordDiff(original = '', edited = '') {
 				<div class="editHistory">
 					<h3>Edit History:</h3>
 					{#if allVersions && allVersions.length > 0}
-						{#each allVersions as version, index}
+						{#each allVersions.slice().reverse() as version, index}
 					  		<div class="version" style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
-							<h4>Version {index + 1}</h4>
+							<h4>{version.timestamp}, {version.author} (Version {allVersions.length - index})</h4>
 							<p><strong>Problem:</strong> {version.problem}</p>
-							<p><strong>Comment:</strong> {version.comment}</p>
 							<p><strong>Answer:</strong> {version.answer}</p>
 							<p><strong>Solution:</strong> {version.solution}</p>
+							<p><strong>Comments:</strong> {version.comment}</p>
 					  		</div>
 						{/each}
 					{:else}
