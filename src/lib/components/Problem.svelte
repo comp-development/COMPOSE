@@ -4,6 +4,7 @@
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
 	import { getAuthorName } from "$lib/supabase";
+	// import { recordDiff } from "$lib/components/ProblemEditor.svelte"; 
 
 	export let problem; // whole object from database
 	export let showMetadata = false;
@@ -36,8 +37,23 @@
 		answer: "",
 		solution: "",
 	};
+
+	// let diffLatexes = {
+	// 	problem: "",
+	// 	comment: "",
+	// 	answer: "",
+	// 	solution: "",
+	// };
+
 	let fieldList = ["problem", "comment", "answer", "solution"];
 	let errorList = [];
+
+	// $: if (loaded && problem) {
+	// 	loadProblem();
+	// 	for (const field of fieldList) {
+	// 		diffLatexes[field] = recordDiff(problem[field + "_original"], problem[field + "_edited"]);
+	// 	}
+	// }
 
 	async function loadProblem() {
 		try {

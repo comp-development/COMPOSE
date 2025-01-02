@@ -73,6 +73,7 @@
 				user_discord: e.users ? e.users.discord : "N/A",
 				user_id: e.users ? e.users.id : "N/A",
 				user_math_background: e.users ? e.users.math_comp_background : "N/A",
+				// edits: e.edits ?? "N/A" 
 			}));
 
 			answerList = data
@@ -293,7 +294,7 @@
 						{ key: "feedback", value: "Feedback", width: "50%" },
 						{ key: "answer", value: "Answer", width: "10%" },
 						{ key: "ratings", value: "Ratings", width: "15%" },
-						{ key: "resolved", value: "Resolved", width: "10%" },
+						{ key: "resolved", value: "Resolved", width: "10%" }
 					]}
 					rows={feedbackList}
 					{pageSize}
