@@ -101,7 +101,7 @@
 			console.log(scheme.progress.after);
 			resetProblems();
 			loaded = true;
-			time_filtered_problems = await getProblems();
+			time_filtered_problems = await getProblems({after: new Date(scheme.progress.after)});
 			time_filtered_problems = sortByDate(time_filtered_problems, 'created_at');
 			
 			// console.log(time_filtered_problems)
@@ -142,7 +142,7 @@
 				problemList.set([...all_problems]);
 				console.log("PROBLEMLIST", get(problemList));
 			}
-			const topicsCount = all_problems.reduce((count, { topics }) => {
+			const topicsCount = time_filtered_problems.reduce((count, { topics }) => {
 				let individualTopics;
 				if (topics) {
 					individualTopics = topics.split(", ").map((topic) => topic.trim());
@@ -499,7 +499,7 @@
 			/>
 		{/if}
 		<p>
-			<strong>Number of Problems: {all_problems.length}</strong>
+			<strong>Number of Problems: {time_filtered_problems.length}</strong>
 		</p>
 		{#each Object.entries(problemCounts) as [cat, count]}
 			<p>
