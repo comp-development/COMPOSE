@@ -117,6 +117,8 @@ let currentVersionIndex = 0;
 
 let allVersions = []; // contains reconstructed full versions
 
+let lastVersion; // full text of the last version for comparison
+
 // Function to save a new version or patch to Supabase
 async function saveVersionToSupabase() {
     try {
@@ -152,6 +154,10 @@ async function loadHistoryFromSupabase() {
 	const history = (await fetchVersionHistoryFromSupabase()) ?? [];
     problemHistory = history;
     allVersions = showEditHistory(problemHistory); // Reconstruct full versions for display
+	if (problemHistory.length > 0)
+	{
+		lastVersion = getVersion(problemHistory.length - 1);
+	}
 }
 
 // Call `loadHistoryFromSupabase` when the component mounts
@@ -205,26 +211,27 @@ async function addVersion() {
 	if (problemHistory.length == 0) {
 		problemHistory.push(newVersion);
 		await saveVersionToSupabase();
+		lastVersion = structuredClone(newVersion);
 		return;
 	}
 
-	if (problemHistory.length % saveInterval == 0) {
+	/* if (problemHistory.length % saveInterval == 0) {
     	problemHistory.push(newVersion);
 		await saveVersionToSupabase();
 		return;
-	}
+	} */
 
-	let lastVersion = structuredClone(problemHistory[problemHistory.length - 1]);
+	// let lastVersion = structuredClone(problemHistory[problemHistory.length - 1]);
 
-	if (lastVersion.kind == "patch")
+	/* if (lastVersion.kind == "patch")
 	{
 		const reconstructedVersion = getVersion(problemHistory.length - 1);
 		// console.log("reconstructed", reconstructedVersion);
 		lastVersion = reconstructedVersion;
-	}
+	} */
 
-	// console.log("last", lastVersion);
-	// console.log("new", newVersion);
+	console.log("last", lastVersion);
+	console.log("new", newVersion);
 
     const diffs = {
     	problem: dmp.diff_main(lastVersion.problem, newVersion.problem),
@@ -251,12 +258,14 @@ async function addVersion() {
     problemHistory.push(patch);
 	await saveVersionToSupabase();
 
+	lastVersion = structuredClone(newVersion);
+
 	// console.log("stringify", JSON.stringify(problemHistory));
 
-    currentVersionIndex = problemHistory.length - 1;
+    // currentVersionIndex = problemHistory.length - 1;
 }
 
-// Reconstruct a full version from patches
+// Reconstruct a full version from patches (not used anymore)
 function getVersion(versionIndex) {
 
     if (versionIndex < 0 || versionIndex >= problemHistory.length) {
@@ -268,10 +277,12 @@ function getVersion(versionIndex) {
       	};
     }
 
-	let startIndex = versionIndex - versionIndex % saveInterval;
-    let reconstructed = structuredClone(problemHistory[startIndex]);
+	//let startIndex = versionIndex - versionIndex % saveInterval;
+    // let reconstructed = structuredClone(problemHistory[startIndex]);
 
-    for (let i = startIndex + 1; i <= versionIndex; i++) {
+	let reconstructed = structuredClone(problemHistory[0]);
+
+    for (let i = 1; i <= versionIndex; i++) {
     	const patch = problemHistory[i];
 
         reconstructed.problem = dmp.patch_apply(patch.problem, reconstructed.problem)[0];
@@ -294,26 +305,97 @@ function showEditHistory(problemHistory) {
 		timestamp: ""
     };
 
+	let highlighted = {
+		problem: "",
+    	comment: "",
+    	answer: "",
+    	solution: "",
+		author: "",
+		timestamp: ""
+    };
+
 	let reconstructedVersions = [];
-    problemHistory.forEach((historyItem, index) => {
+	let highlightedVersions = [];
+    problemHistory.forEach((historyItem) => {
 		console.log(historyItem);
     	if (historyItem.kind == "version") {
       		reconstructed = structuredClone(historyItem);
+			highlighted = structuredClone(historyItem); 
     	} else if (historyItem.kind == "patch") {
       		const patch = historyItem;
 
-      		reconstructed.problem = applyPatch(reconstructed.problem, patch.problem);
+			highlighted.problem = highlightChanges(reconstructed.problem, patch.problem);
+            highlighted.comment = highlightChanges(reconstructed.comment, patch.comment);
+            highlighted.answer = highlightChanges(reconstructed.answer, patch.answer);
+            highlighted.solution = highlightChanges(reconstructed.solution, patch.solution);
+
+			reconstructed.problem = applyPatch(reconstructed.problem, patch.problem);
       		reconstructed.comment = applyPatch(reconstructed.comment, patch.comment);
       		reconstructed.answer = applyPatch(reconstructed.answer, patch.answer);
-      		reconstructed.solution = applyPatch(reconstructed.solution, patch.solution);	
+      		reconstructed.solution = applyPatch(reconstructed.solution, patch.solution);
+	
+			highlighted.author = patch.author;
+			highlighted.timestamp = patch.timestamp;
+
 			reconstructed.author = patch.author;
 			reconstructed.timestamp = patch.timestamp;
     	}
+		highlightedVersions.push(structuredClone(highlighted));
 		reconstructedVersions.push(structuredClone(reconstructed));
     });
 
-  return reconstructedVersions;
+  return highlightedVersions;
 }
+
+function highlightChanges(originalText, patch) {
+	console.log(originalText);
+    // Apply the patch to get the updated text
+    const [patchedText] = dmp.patch_apply(patch, originalText);
+
+    // Generate diffs between the original and patched text
+    const diffs = dmp.diff_main(originalText, patchedText);
+    dmp.diff_cleanupSemantic(diffs);
+
+    // Highlight changes
+    return diffs
+        .map(([operation, text]) => {
+            if (operation === 1) {
+                // Insertion
+                return `<span style="color: green; background-color: #e6ffe6;">${text}</span>`;
+            } else if (operation === -1) {
+                // Deletion
+                return `<span style="color: red; background-color: #ffe6e6; text-decoration: line-through;">${text}</span>`;
+            } else {
+                // No change
+                return text;
+            }
+        })
+        .join("");
+}
+
+/* function highlightChanges(originalText, patch) {
+    const [patchedText] = dmp.patch_apply(patch, originalText);
+
+    const diffs = dmp.diff_main(originalText, patchedText);
+    dmp.diff_cleanupSemantic(diffs);
+
+    // Highlight changes
+    let highlightedText = "";
+    diffs.forEach(([operation, text]) => {
+        if (operation === 1) {
+            // Insertion
+            highlightedText += `<span style="color: green; background-color: #e6ffe6;">${text}</span>`;
+        } else if (operation === -1) {
+            // Deletion
+            highlightedText += `<span style="color: red; background-color: #ffe6e6; text-decoration: line-through;">${text}</span>`;
+        } else {
+            // No change
+            highlightedText += text;
+        }
+    });
+
+    return highlightedText;
+} */
 
 // Helper function to apply a patch to a string
 function applyPatch(originalText, diff) {
@@ -642,10 +724,10 @@ function recordDiff(original = '', edited = '') {
 						{#each allVersions.slice().reverse() as version, index}
 					  		<div class="version" style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
 							<h4>{version.timestamp}, {version.author} (Version {allVersions.length - index})</h4>
-							<p><strong>Problem:</strong> {version.problem}</p>
-							<p><strong>Answer:</strong> {version.answer}</p>
-							<p><strong>Solution:</strong> {version.solution}</p>
-							<p><strong>Comments:</strong> {version.comment}</p>
+							<p><strong>Problem:</strong> {@html version.problem}</p>
+							<p><strong>Answer:</strong> {@html version.answer}</p>
+							<p><strong>Solution:</strong> {@html version.solution}</p>
+							<p><strong>Comments:</strong> {@html version.comment}</p>
 					  		</div>
 						{/each}
 					{:else}
