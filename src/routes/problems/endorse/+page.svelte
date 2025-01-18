@@ -7,11 +7,12 @@
         getThisUser,
         getRandomProblems,
         addProblemFeedback,
-        editProblem
+        editProblem,
 	} from "$lib/supabase";
     import { handleError } from "$lib/handleError";
 	import toast from "svelte-french-toast";
     import TestsolveList from "$lib/components/TestsolveList.svelte";
+    import { supabase } from "$lib/supabaseClient";
 	let startTime = new Date();
 	let lastTime = startTime;
 	let reviewing = false;
@@ -44,9 +45,22 @@
 		}
         newProblem();
     }
+    
 
-    function handleEndorse() {
+    async function handleEndorse() {
         if (problemFeedback) {
+
+            const userId = (await getThisUser()).id;
+            
+            const { data, error } = await supabase
+                .from('endorsements')
+                .insert([{ endorser_id: userId, problem_id: problemFeedback.problem_id}]);
+
+            if (error) {
+                console.error("Supabase error:", error);
+                throw error;
+            }
+
 			addProblemFeedback([problemFeedback]);
             editProblem({ status: "Endorsed" }, problemFeedback.problem_id);
             toast.success("Feedback added")

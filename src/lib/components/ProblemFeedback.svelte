@@ -21,6 +21,7 @@
 		getProblemFeedback,
 		updateTestsolveAnswer,
 	} from "$lib/supabase";
+	import { supabase } from "$lib/supabaseClient";
 	import Error from "../../routes/+error.svelte";
 
 	export let problem_id;
@@ -107,7 +108,8 @@
 					: null;
 
 			groupAnswerList();
-
+			
+			loadEndorsements(problem_id);
 			loaded = true;
 		} catch (error) {
 			handleError(error);
@@ -202,6 +204,24 @@
 	}
 
 	loadFeedback();
+
+	let endorsementList = [];
+	async function loadEndorsements(problem_id) {
+		try {
+			const { data, error } = await supabase
+				.from('endorsements')
+				.select('endorser_id')
+				.eq('problem_id', problem_id);
+
+			if (error) {
+				throw error;
+			}
+			endorsementList = data || [];
+		} catch (error) {
+			handleError(error);
+			toast.error(error.message);
+	}
+}
 </script>
 
 <div class="flex">
@@ -348,6 +368,34 @@
 		{/if}
 	</div>
 </div>
+
+<div class="flex">
+	<div class="feedback-container">
+		<h2>Endorsements</h2>
+		<br />
+		<DataTable
+			expandable
+			sortable
+			size="compact"
+			headers={[
+				{ key: "endorser_id", value: "Endorser ID", width: "50%" },
+				{ key: "endorsed_at", value: "Endorsed At", width: "50%" },
+			]}
+			rows={endorsementList}
+		>
+			<svelte:fragment slot="cell" let:row let:cell>
+				<div>
+					{#if cell.key == "endorser_id"}
+						<div style="overflow: hidden;">{cell.value}</div>
+					{:else if cell.key == "endorsed_at"}
+						<div style="overflow: hidden;">{cell.value}</div>
+					{/if}
+				</div>
+			</svelte:fragment>
+		</DataTable>
+	</div>
+</div>
+
 <br />
 
 <style>
