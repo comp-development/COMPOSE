@@ -366,10 +366,9 @@
 		try {
 			isDisabled = true;
 			if (
-				fields.problem &&
-				fields.comment &&
-				fields.answer &&
-				fields.solution &&
+				fields.problem.length > 0 &&
+				fields.answer.length > 0 &&
+				fields.solution.length > 0 &&
 				topics
 			) {
 				if (problemFiles.length > fileUploadLimit) {
