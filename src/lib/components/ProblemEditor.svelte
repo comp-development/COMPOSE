@@ -11,14 +11,13 @@
 	import { onMount } from "svelte";
 
 	import { checkLatex } from "$lib/latexStuff";
-	import { ProblemImage } from "$lib/getProblemImages";
 	import Problem from "$lib/components/Problem.svelte";
 	import LatexKeyboard from "$lib/components/editor/LatexKeyboard.svelte";
 	import ImageManager from "$lib/components/images/ImageManager.svelte";
+	import { user } from "$lib/sessionStore";
 	import { handleError } from "$lib/handleError.ts";
 	import { getGlobalTopics } from "$lib/supabase";
 	import { supabase } from "$lib/supabaseClient";
-	// import { diffWords } from 'diff';
 	import DiffMatchPatch from "diff-match-patch";
 
 	export let originalProblem = null;
@@ -73,7 +72,6 @@
 	const fileUploadLimit = 5; // # of files that can be uploaded
 	const fileSizeLimit = 52428800; // 50 mb
 	let problemFiles = originalImages.map((x) => x.toFile());
-	$: problemImages = problemFiles.map((x) => ProblemImage.fromFile(x));
 
 	let activeTextarea = null;
 	function updateActive() {
@@ -96,10 +94,8 @@
 
 	let allVersions = []; // contains reconstructed full versions
 
-	let lastVersion; // full text of the last version for comparison
-
 	// Function to save a new version or patch to Supabase
-	async function saveVersionToSupabase() {
+	async function saveVersionHistoryToSupabase() {
 		try {
 			const { data, error } = await supabase
 				.from("problems")
@@ -108,7 +104,7 @@
 			if (error) throw error;
 			console.log("Version saved:", data);
 		} catch (err) {
-			console.error("Failed to save version to Supabase:", err.message);
+			console.error("Failed to save version history to Supabase:", err.message);
 		}
 	}
 
@@ -133,27 +129,21 @@
 
 	// Function to repopulate `problemHistory` from Supabase
 	async function loadHistoryFromSupabase() {
-		const history = (await fetchVersionHistoryFromSupabase()) ?? [];
-		problemHistory = history;
-		allVersions = showEditHistory(problemHistory); // Reconstruct full versions for display
-		if (problemHistory.length > 0) {
-			lastVersion = getVersion(problemHistory.length - 1);
+		let history = (await fetchVersionHistoryFromSupabase());
+		// If there is no history yet, add one that we may diff against later.
+		// This may still fail if we are just creating a new problem (so no ID exists).
+		if (!history || history.length == 0) {
+			await addVersion();
+			history = (await fetchVersionHistoryFromSupabase()) ?? [];
 		}
+		problemHistory = history;
+		allVersions = reconstructVersions(problemHistory);
 	}
 
 	// Call `loadHistoryFromSupabase` when the component mounts
 	onMount(() => {
 		loadHistoryFromSupabase();
 	});
-
-	async function getCurrentUser() {
-		const { data, error } = await supabase.auth.getUser();
-		if (error) {
-			console.error("Failed to get user:", error.message);
-			return "unknown";
-		}
-		return data?.user || "unknown";
-	}
 
 	async function getPacificTime() {
 		const now = new Date();
@@ -175,7 +165,6 @@
 	}
 
 	async function addVersion() {
-		const user = await getCurrentUser();
 		const date = await getPacificTime();
 
 		const newVersion = {
@@ -184,17 +173,17 @@
 			answer: fields.answer,
 			solution: fields.solution,
 			kind: "version",
-			author: user.email,
+			author: $user.email,
 			timestamp: date,
 		};
 
 		if (problemHistory.length == 0) {
-			problemHistory.push(newVersion);
-			await saveVersionToSupabase();
-			lastVersion = structuredClone(newVersion);
+			problemHistory.push(structuredClone(newVersion));
+			await saveVersionHistoryToSupabase();
 			return;
 		}
 
+		const lastVersion = structuredClone(allVersions[allVersions.length - 1]);
 		console.log("last", lastVersion);
 		console.log("new", newVersion);
 
@@ -216,63 +205,47 @@
 			answer: dmp.patch_make(lastVersion.answer, diffs.answer),
 			solution: dmp.patch_make(lastVersion.solution, diffs.solution),
 			kind: "patch",
-			author: user.email,
+			author: $user.email,
 			timestamp: date,
 		};
 
 		problemHistory.push(patch);
-		await saveVersionToSupabase();
-
-		lastVersion = structuredClone(newVersion);
+		await saveVersionHistoryToSupabase();
 	}
 
-	// Reconstruct a full version from patches (not used anymore)
-	function getVersion(versionIndex) {
-		if (versionIndex < 0 || versionIndex >= problemHistory.length) {
-			return {
-				problem: "",
-				comment: "",
-				answer: "",
-				solution: "",
-			};
-		}
-
-		let reconstructed = structuredClone(problemHistory[0]);
-
-		for (let i = 1; i <= versionIndex; i++) {
-			const patch = problemHistory[i];
-
-			reconstructed.problem = dmp.patch_apply(
-				patch.problem,
-				reconstructed.problem
-			)[0];
-			reconstructed.comment = dmp.patch_apply(
-				patch.comment,
-				reconstructed.comment
-			)[0];
-			reconstructed.answer = dmp.patch_apply(
-				patch.answer,
-				reconstructed.answer
-			)[0];
-			reconstructed.solution = dmp.patch_apply(
-				patch.solution,
-				reconstructed.solution
-			)[0];
-		}
-
-		return reconstructed;
-	}
-
-	function showEditHistory(problemHistory) {
+	function reconstructVersions(problemHistory) {
 		let reconstructed = {
 			problem: "",
 			comment: "",
 			answer: "",
 			solution: "",
-			author: "",
-			timestamp: "",
 		};
+		let output = [];
+		for (const h of problemHistory) {
+			if (h.kind == "version") {
+				reconstructed = structuredClone(h);
+			} else if (h.kind == "patch") {
+				reconstructed.problem = applyPatch(
+					reconstructed.problem,
+					h.problem
+				);
+				reconstructed.comment = applyPatch(
+					reconstructed.comment,
+					h.comment
+				);
+				reconstructed.answer = applyPatch(reconstructed.answer, h.answer);
+				reconstructed.solution = applyPatch(
+					reconstructed.solution,
+					h.solution
+				);
+			}
+			output.push(structuredClone(reconstructed));
+		}
+		return output;
+	}
 
+	// If the history item is a version, then the prevReconstructedVersion can be null.
+	function highlightedEditHistory(historyItem, prevReconstructedVersion) {
 		let highlighted = {
 			problem: "",
 			comment: "",
@@ -282,62 +255,36 @@
 			timestamp: "",
 		};
 
-		let reconstructedVersions = [];
-		let highlightedVersions = [];
-		problemHistory.forEach((historyItem) => {
-			console.log(historyItem);
-			if (historyItem.kind == "version") {
-				reconstructed = structuredClone(historyItem);
-				highlighted = structuredClone(historyItem);
-			} else if (historyItem.kind == "patch") {
-				const patch = historyItem;
+		if (historyItem.kind == "version") {
+			return historyItem;
+		} else if (historyItem.kind == "patch") {
+			const patch = historyItem;
 
-				highlighted.problem = highlightChanges(
-					reconstructed.problem,
-					patch.problem
-				);
-				highlighted.comment = highlightChanges(
-					reconstructed.comment,
-					patch.comment
-				);
-				highlighted.answer = highlightChanges(
-					reconstructed.answer,
-					patch.answer
-				);
-				highlighted.solution = highlightChanges(
-					reconstructed.solution,
-					patch.solution
-				);
+			highlighted.problem = highlightChanges(
+				prevReconstructedVersion.problem,
+				patch.problem
+			);
+			highlighted.comment = highlightChanges(
+				prevReconstructedVersion.comment,
+				patch.comment
+			);
+			highlighted.answer = highlightChanges(
+				prevReconstructedVersion.answer,
+				patch.answer
+			);
+			highlighted.solution = highlightChanges(
+				prevReconstructedVersion.solution,
+				patch.solution
+			);
 
-				reconstructed.problem = applyPatch(
-					reconstructed.problem,
-					patch.problem
-				);
-				reconstructed.comment = applyPatch(
-					reconstructed.comment,
-					patch.comment
-				);
-				reconstructed.answer = applyPatch(reconstructed.answer, patch.answer);
-				reconstructed.solution = applyPatch(
-					reconstructed.solution,
-					patch.solution
-				);
+			highlighted.author = patch.author;
+			highlighted.timestamp = patch.timestamp;
+		}
 
-				highlighted.author = patch.author;
-				highlighted.timestamp = patch.timestamp;
-
-				reconstructed.author = patch.author;
-				reconstructed.timestamp = patch.timestamp;
-			}
-			highlightedVersions.push(structuredClone(highlighted));
-			reconstructedVersions.push(structuredClone(reconstructed));
-		});
-
-		return highlightedVersions;
+		return highlighted;
 	}
 
 	function highlightChanges(originalText, patch) {
-		console.log(originalText);
 		// Apply the patch to get the updated text
 		const [patchedText] = dmp.patch_apply(patch, originalText);
 
@@ -461,7 +408,8 @@
 					};
 
 					await addVersion();
-					allVersions = showEditHistory(problemHistory); // !!! Can definitely make more efficient (all the past versions are already displayed)
+					allVersions.push(structuredClone(fields));
+					allVersions = allVersions;
 
 					submittedText = "Submitting problem...";
 					await onSubmit(payload);
@@ -657,8 +605,8 @@
 
 				<div class="editHistory">
 					<h3>Edit History:</h3>
-					{#if allVersions && allVersions.length > 0}
-						{#each allVersions.slice().reverse() as version, index}
+					{#if problemHistory && problemHistory.length > 0}
+						{#each problemHistory.map((e, i) => highlightedEditHistory(e, allVersions[i-1])).reverse() as version, index}
 							<div
 								class="version"
 								style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;"
