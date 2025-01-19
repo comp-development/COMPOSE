@@ -209,8 +209,15 @@
 			timestamp: date,
 		};
 
+		if (patch.problem.length == 0 && patch.comment.length == 0 && patch.answer.length == 0 && patch.solution.length == 0) {
+			return;
+		}
+
 		problemHistory.push(patch);
 		await saveVersionHistoryToSupabase();
+
+		allVersions.push(structuredClone(fields));
+		allVersions = allVersions;
 	}
 
 	function reconstructVersions(problemHistory) {
@@ -398,8 +405,6 @@
 					};
 
 					await addVersion();
-					allVersions.push(structuredClone(fields));
-					allVersions = allVersions;
 
 					submittedText = "Submitting problem...";
 					await onSubmit(payload);
