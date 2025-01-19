@@ -129,7 +129,7 @@
 
 	// Function to repopulate `problemHistory` from Supabase
 	async function loadHistoryFromSupabase() {
-		let history = (await fetchVersionHistoryFromSupabase());
+		let history = await fetchVersionHistoryFromSupabase();
 		// If there is no history yet, add one that we may diff against later.
 		// This may still fail if we are just creating a new problem (so no ID exists).
 		if (!history || history.length == 0) {
@@ -225,19 +225,10 @@
 			if (h.kind == "version") {
 				reconstructed = structuredClone(h);
 			} else if (h.kind == "patch") {
-				reconstructed.problem = applyPatch(
-					reconstructed.problem,
-					h.problem
-				);
-				reconstructed.comment = applyPatch(
-					reconstructed.comment,
-					h.comment
-				);
+				reconstructed.problem = applyPatch(reconstructed.problem, h.problem);
+				reconstructed.comment = applyPatch(reconstructed.comment, h.comment);
 				reconstructed.answer = applyPatch(reconstructed.answer, h.answer);
-				reconstructed.solution = applyPatch(
-					reconstructed.solution,
-					h.solution
-				);
+				reconstructed.solution = applyPatch(reconstructed.solution, h.solution);
 			}
 			output.push(structuredClone(reconstructed));
 		}
@@ -606,7 +597,9 @@
 				<div class="editHistory">
 					<h3>Edit History:</h3>
 					{#if problemHistory && problemHistory.length > 0}
-						{#each problemHistory.map((e, i) => highlightedEditHistory(e, allVersions[i-1])).reverse() as version, index}
+						{#each problemHistory
+							.map((e, i) => highlightedEditHistory(e, allVersions[i - 1]))
+							.reverse() as version, index}
 							<div
 								class="version"
 								style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;"
