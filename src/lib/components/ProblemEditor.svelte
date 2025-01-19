@@ -1,5 +1,4 @@
 <script>
-// <script context="module">
 	import {
 		MultiSelect,
 		TextInput,
@@ -7,12 +6,11 @@
 		FormGroup,
 		TextArea,
 		Button,
-		FileUploader,
-		FileUploaderItem,
 	} from "carbon-components-svelte";
 	import toast from "svelte-french-toast";
+	import { onMount } from "svelte";
 
-	import { displayLatex, checkLatex } from "$lib/latexStuff";
+	import { checkLatex } from "$lib/latexStuff";
 	import { ProblemImage } from "$lib/getProblemImages";
 	import Problem from "$lib/components/Problem.svelte";
 	import LatexKeyboard from "$lib/components/editor/LatexKeyboard.svelte";
@@ -26,8 +24,6 @@
 	export let originalProblem = null;
 	export let originalImages = [];
 	export let onDirty = () => {};
-
-	export let diffs;
 
 	// function that has the payload as argument, runs when submit button is pressed.
 	// if not passed in, submit button is not shown
@@ -50,7 +46,6 @@
 	let isDisabled = true;
 	let problemFailed = false;
 	let submittedText = "";
-	let error = "";
 	let show = true;
 
 	let fields = {
@@ -77,9 +72,7 @@
 
 	const fileUploadLimit = 5; // # of files that can be uploaded
 	const fileSizeLimit = 52428800; // 50 mb
-	let fileUploader;
 	let problemFiles = originalImages.map((x) => x.toFile());
-	let problemImages = [];
 	$: problemImages = problemFiles.map((x) => ProblemImage.fromFile(x));
 
 	let activeTextarea = null;
@@ -97,23 +90,9 @@
 		fields[fieldName] += fieldValue;
 	}
 
-	// export function recordDiff(original = '', edited = '') {
-    // 	return diffWords(original, edited).map(part => {
-    //     	if (part.added) {
-    //         	return `<span style="color: green;">${part.value}</span>`; // Highlight new text in green
-    //    		} else if (part.removed) {
-    //         	return `<span style="text-decoration: line-through; color: red;">${part.value}</span>`; // Strike-through deleted text
-    //     	} else {
-    //         	return `<span>${part.value}</span>`; // Keep unchanged text
-    //     	}
-    // 	}).join('');
-	// }
-
 const dmp = new DiffMatchPatch();
 
 let problemHistory = []; // versions and patches
-const saveInterval = 5; // save full version every few times
-let currentVersionIndex = 0;
 
 let allVersions = []; // contains reconstructed full versions
 
@@ -215,21 +194,6 @@ async function addVersion() {
 		return;
 	}
 
-	/* if (problemHistory.length % saveInterval == 0) {
-    	problemHistory.push(newVersion);
-		await saveVersionToSupabase();
-		return;
-	} */
-
-	// let lastVersion = structuredClone(problemHistory[problemHistory.length - 1]);
-
-	/* if (lastVersion.kind == "patch")
-	{
-		const reconstructedVersion = getVersion(problemHistory.length - 1);
-		// console.log("reconstructed", reconstructedVersion);
-		lastVersion = reconstructedVersion;
-	} */
-
 	console.log("last", lastVersion);
 	console.log("new", newVersion);
 
@@ -260,9 +224,6 @@ async function addVersion() {
 
 	lastVersion = structuredClone(newVersion);
 
-	// console.log("stringify", JSON.stringify(problemHistory));
-
-    // currentVersionIndex = problemHistory.length - 1;
 }
 
 // Reconstruct a full version from patches (not used anymore)
@@ -276,9 +237,6 @@ function getVersion(versionIndex) {
         	solution: ""
       	};
     }
-
-	//let startIndex = versionIndex - versionIndex % saveInterval;
-    // let reconstructed = structuredClone(problemHistory[startIndex]);
 
 	let reconstructed = structuredClone(problemHistory[0]);
 
@@ -373,47 +331,11 @@ function highlightChanges(originalText, patch) {
         .join("");
 }
 
-/* function highlightChanges(originalText, patch) {
-    const [patchedText] = dmp.patch_apply(patch, originalText);
-
-    const diffs = dmp.diff_main(originalText, patchedText);
-    dmp.diff_cleanupSemantic(diffs);
-
-    // Highlight changes
-    let highlightedText = "";
-    diffs.forEach(([operation, text]) => {
-        if (operation === 1) {
-            // Insertion
-            highlightedText += `<span style="color: green; background-color: #e6ffe6;">${text}</span>`;
-        } else if (operation === -1) {
-            // Deletion
-            highlightedText += `<span style="color: red; background-color: #ffe6e6; text-decoration: line-through;">${text}</span>`;
-        } else {
-            // No change
-            highlightedText += text;
-        }
-    });
-
-    return highlightedText;
-} */
-
 // Helper function to apply a patch to a string
 function applyPatch(originalText, diff) {
 	// 'dmp.diff_apply' returns an array where the first element is the updated text
 	const result = dmp.patch_apply(diff, originalText);
 	return result[0];
-}
-
-function recordDiff(original = '', edited = '') {
-    return dmp.diff_main(original, edited).map(part => {
-      if (part.added) {
-        return `<span style="color: green;">${part.value}</span>`; // Highlight new text in green
-      } else if (part.removed) {
-        return `<span style="text-decoration: line-through; color: red;">${part.value}</span>`; // Strike-through deleted text
-      } else {
-        return `<span>${part.value}</span>`; // Keep unchanged text
-      }
-    }).join('');
 }
 
 	function updateFields() {
@@ -430,38 +352,12 @@ function recordDiff(original = '', edited = '') {
 					if (err.sev === "err") failed = true;
 				}
 
-				// if (fields[field] !== originalProblem[field]) {
-				// 	hasChanges = true;
-				// 	diffFields[field] = recordDiff(originalProblem[field], fields[field]);
-				// } else {
-				// 	diffFields[field] = fields[field];
-				// } *causes error with the latex on the side
 			}
 			if (failed) {
 				isDisabled = true;
 			} else {
-				/* const newVersion = {
-        			problem: fields.problem,
-        			comment: fields.comment,
-        			answer: fields.answer,
-        			solution: fields.solution,
-        			timestamp: new Date().toISOString() // to track when the version was created
-      			}; */
-
-     			// problemHistory.push({ version: newVersion });
-
-				/* addVersion();
-				allVersions = showEditHistory(problemHistory); */
-
 				for (const field of fieldList) {
 					latexes[field + "_latex"] = fields[field];
-
-					// addVersion(fields.problem);	
-
-					/* if (field == "problem")
-					{
-						addVersion(fields.problem);		
-					} */
 				}
 				// force reactivity
 				latexes = latexes;
@@ -545,7 +441,6 @@ function recordDiff(original = '', edited = '') {
 			toast.error(error.message);
 		}
 	}
-	import { onMount } from "svelte";
 
 </script>
 
