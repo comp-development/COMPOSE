@@ -73,7 +73,6 @@
 				user_discord: e.users ? e.users.discord : "N/A",
 				user_id: e.users ? e.users.id : "N/A",
 				user_math_background: e.users ? e.users.math_comp_background : "N/A",
-				// edits: e.edits ?? "N/A" 
 			}));
 
 			answerList = data
