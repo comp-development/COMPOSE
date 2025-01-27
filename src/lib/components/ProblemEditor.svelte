@@ -97,27 +97,14 @@
 		fields[fieldName] += fieldValue;
 	}
 
-	// export function recordDiff(original = '', edited = '') {
-    // 	return diffWords(original, edited).map(part => {
-    //     	if (part.added) {
-    //         	return `<span style="color: green;">${part.value}</span>`; // Highlight new text in green
-    //    		} else if (part.removed) {
-    //         	return `<span style="text-decoration: line-through; color: red;">${part.value}</span>`; // Strike-through deleted text
-    //     	} else {
-    //         	return `<span>${part.value}</span>`; // Keep unchanged text
-    //     	}
-    // 	}).join('');
-	// }
-
 const dmp = new DiffMatchPatch();
 
 let problemHistory = []; // versions and patches
-const saveInterval = 5; // save full version every few times
-let currentVersionIndex = 0;
-
 let allVersions = []; // contains reconstructed full versions
+// const saveInterval = 5;
 
 let lastVersion; // full text of the last version for comparison
+let allExpanded = false;
 
 // Function to save a new version or patch to Supabase
 async function saveVersionToSupabase() {
@@ -265,7 +252,7 @@ async function addVersion() {
     // currentVersionIndex = problemHistory.length - 1;
 }
 
-// Reconstruct a full version from patches (not used anymore)
+// Reconstruct a full version from patches
 function getVersion(versionIndex) {
 
     if (versionIndex < 0 || versionIndex >= problemHistory.length) {
@@ -277,18 +264,27 @@ function getVersion(versionIndex) {
       	};
     }
 
-	//let startIndex = versionIndex - versionIndex % saveInterval;
+	// let startIndex = versionIndex - versionIndex % saveInterval;
     // let reconstructed = structuredClone(problemHistory[startIndex]);
 
 	let reconstructed = structuredClone(problemHistory[0]);
 
     for (let i = 1; i <= versionIndex; i++) {
-    	const patch = problemHistory[i];
+		if (problemHistory[i].kind == "version")
+		{
+			reconstructed = structuredClone(problemHistory[i]);
+		}
+		else
+		{
+    		const patch = problemHistory[i];
 
-        reconstructed.problem = dmp.patch_apply(patch.problem, reconstructed.problem)[0];
-        reconstructed.comment = dmp.patch_apply(patch.comment, reconstructed.comment)[0];
-        reconstructed.answer = dmp.patch_apply(patch.answer, reconstructed.answer)[0];
-        reconstructed.solution = dmp.patch_apply(patch.solution, reconstructed.solution)[0];
+        	reconstructed.problem = dmp.patch_apply(patch.problem, reconstructed.problem)[0];
+        	reconstructed.comment = dmp.patch_apply(patch.comment, reconstructed.comment)[0];
+        	reconstructed.answer = dmp.patch_apply(patch.answer, reconstructed.answer)[0];
+        	reconstructed.solution = dmp.patch_apply(patch.solution, reconstructed.solution)[0];
+
+			if (reconstructed.restoredFrom) delete reconstructed.restoredFrom;
+		}
       }
 
     return reconstructed;
@@ -316,12 +312,17 @@ function showEditHistory(problemHistory) {
 
 	let reconstructedVersions = [];
 	let highlightedVersions = [];
+
+	// console.log("length", problemHistory.length);
+
     problemHistory.forEach((historyItem) => {
-		console.log(historyItem);
+		// console.log(historyItem);
     	if (historyItem.kind == "version") {
       		reconstructed = structuredClone(historyItem);
 			highlighted = structuredClone(historyItem); 
+			//console.log("final", JSON.stringify(historyItem));
     	} else if (historyItem.kind == "patch") {
+			// console.log("final", JSON.stringify(historyItem));
       		const patch = historyItem;
 
 			highlighted.problem = highlightChanges(reconstructed.problem, patch.problem);
@@ -339,6 +340,9 @@ function showEditHistory(problemHistory) {
 
 			reconstructed.author = patch.author;
 			reconstructed.timestamp = patch.timestamp;
+
+			if (reconstructed.restoredFrom) delete reconstructed.restoredFrom; // only need for the actual restored version
+			if (highlighted.restoredFrom) delete highlighted.restoredFrom;
     	}
 		highlightedVersions.push(structuredClone(highlighted));
 		reconstructedVersions.push(structuredClone(reconstructed));
@@ -347,8 +351,15 @@ function showEditHistory(problemHistory) {
   return highlightedVersions;
 }
 
+// Helper function to apply a patch to a string
+function applyPatch(originalText, diff) {
+	// 'dmp.diff_apply' returns an array where the first element is the updated text
+	const result = dmp.patch_apply(diff, originalText);
+	return result[0];
+}
+
 function highlightChanges(originalText, patch) {
-	console.log(originalText);
+	// console.log(originalText);
     // Apply the patch to get the updated text
     const [patchedText] = dmp.patch_apply(patch, originalText);
 
@@ -373,47 +384,91 @@ function highlightChanges(originalText, patch) {
         .join("");
 }
 
-/* function highlightChanges(originalText, patch) {
-    const [patchedText] = dmp.patch_apply(patch, originalText);
-
-    const diffs = dmp.diff_main(originalText, patchedText);
-    dmp.diff_cleanupSemantic(diffs);
-
-    // Highlight changes
-    let highlightedText = "";
-    diffs.forEach(([operation, text]) => {
-        if (operation === 1) {
-            // Insertion
-            highlightedText += `<span style="color: green; background-color: #e6ffe6;">${text}</span>`;
-        } else if (operation === -1) {
-            // Deletion
-            highlightedText += `<span style="color: red; background-color: #ffe6e6; text-decoration: line-through;">${text}</span>`;
-        } else {
-            // No change
-            highlightedText += text;
-        }
+  // Function to toggle between expanding and collapsing all
+  function toggleAll() {
+	event.preventDefault();
+    allExpanded = !allExpanded;
+    document.querySelectorAll(".version").forEach((detail) => {
+      detail.open = allExpanded;
     });
+  }
 
-    return highlightedText;
-} */
+  function toggleDetails(index) {
+    const details = document.getElementById(`details-${index}`);
+    const button = document.querySelector(`.dropdown-btn:nth-of-type(${index + 1})`);
+    const arrow = button.querySelector('.arrow');
 
-// Helper function to apply a patch to a string
-function applyPatch(originalText, diff) {
-	// 'dmp.diff_apply' returns an array where the first element is the updated text
-	const result = dmp.patch_apply(diff, originalText);
-	return result[0];
+    if (details.classList.contains("show")) {
+        details.classList.remove("show");
+        setTimeout(() => {
+            details.style.display = "none";
+        }, 300);
+        arrow.innerHTML = "&#8250;";
+        button.classList.remove('active'); // Remove active class
+    } else {
+        details.style.display = "block";
+        setTimeout(() => details.classList.add("show"), 10);
+        arrow.innerHTML = "&#8595;";
+        button.classList.add('active'); // Add active class
+    }
 }
 
-function recordDiff(original = '', edited = '') {
-    return dmp.diff_main(original, edited).map(part => {
-      if (part.added) {
-        return `<span style="color: green;">${part.value}</span>`; // Highlight new text in green
-      } else if (part.removed) {
-        return `<span style="text-decoration: line-through; color: red;">${part.value}</span>`; // Strike-through deleted text
-      } else {
-        return `<span>${part.value}</span>`; // Keep unchanged text
-      }
-    }).join('');
+let lastRestoredVersion = null;
+async function restoreVersion(index) {
+	// Save the current open/close state of all details elements
+    const detailsStates = Array.from(document.querySelectorAll(".version")).map((details) => details.open);
+
+	event.preventDefault();
+	const user = await getCurrentUser();
+	const date = await getPacificTime();
+
+     if (lastRestoredVersion === index || (index == problemHistory.length - 1 && problemHistory[index].restoredFrom)) {
+        alert("This version has just been restored.");
+        return;
+    }
+
+	let version = getVersion(index);
+
+	console.log("index", index);
+	console.log("restored", version);
+
+    const restoredVersion = {
+        ...version,
+		kind: "version",
+		author: user.email,
+        restoredFrom: `Version ${index + 1}`,
+        timestamp: date
+    };
+
+	problemHistory.push(restoredVersion);
+	await saveVersionToSupabase();
+	lastVersion = structuredClone(restoredVersion);
+
+	allVersions = [...allVersions, restoredVersion];
+
+    fields = {
+        problem: restoredVersion.problem ?? fields.problem,
+        comment: restoredVersion.comment ?? fields.comment,
+        answer: restoredVersion.answer ?? fields.answer,
+        solution: restoredVersion.solution ?? fields.solution,
+    };
+
+    setTimeout(() => {
+        // Restore the open/close state of all other details
+        const detailsElements = document.querySelectorAll(".version");
+        detailsStates.forEach((state, i) => {
+            if (detailsElements[i + 1]) {
+                detailsElements[i + 1].open = state;
+            }
+        });
+
+        // Open the newly restored version
+        if (detailsElements[0]) {
+            detailsElements[0].open = true;
+        }
+    }, 0);
+
+    lastRestoredVersion = index;
 }
 
 	function updateFields() {
@@ -530,8 +585,24 @@ function recordDiff(original = '', edited = '') {
 						status: status,
 					};
 
+					const detailsStates = Array.from(document.querySelectorAll(".version")).map((details) => details.open);
+					
 					await addVersion();
 					allVersions = showEditHistory(problemHistory); // !!! Can definitely make more efficient (all the past versions are already displayed)
+					setTimeout(() => {
+       					 // Restore the open/close state of all other details
+        				const detailsElements = document.querySelectorAll(".version");
+        				detailsStates.forEach((state, i) => {
+            			if (detailsElements[i + 1]) {
+                			detailsElements[i + 1].open = state;
+            			}
+       				 });
+
+        			// Open the newly restored version
+       				if (detailsElements[0]) {
+            			detailsElements[0].open = true;
+        			}
+    }, 0);
 
 					submittedText = "Submitting problem...";
 					await onSubmit(payload);
@@ -720,15 +791,36 @@ function recordDiff(original = '', edited = '') {
 
 				<div class="editHistory">
 					<h3>Edit History:</h3>
+
+					{#if allVersions && allVersions.length > 0}
+					<!-- Expand/Collapse Toggle Button -->
+					<div style="margin-bottom: 10px;">
+					  <button on:click={toggleAll}>
+						{allExpanded ? "Collapse All" : "Expand All"}
+					  </button>
+					</div>
+					{/if}
+
 					{#if allVersions && allVersions.length > 0}
 						{#each allVersions.slice().reverse() as version, index}
-					  		<div class="version" style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
-							<h4>{version.timestamp}, {version.author} (Version {allVersions.length - index})</h4>
-							<p><strong>Problem:</strong> {@html version.problem}</p>
-							<p><strong>Answer:</strong> {@html version.answer}</p>
-							<p><strong>Solution:</strong> {@html version.solution}</p>
-							<p><strong>Comments:</strong> {@html version.comment}</p>
-					  		</div>
+						<details class="version {version.restoredFrom ? 'restored-version' : ''}">
+							<summary>
+								<h4>
+									{version.timestamp}, {version.author} (Version {allVersions.length - index})
+									{#if version.restoredFrom}
+										<span class="restored-label">[Restored from {version.restoredFrom}]</span>
+									{/if}
+								</h4>
+								<span class="arrow">&#8250;</span>
+							</summary>
+							<div class="details-content">
+								<p><strong>Problem:</strong> {@html version.problem}</p>
+								<p><strong>Answer:</strong> {@html version.answer}</p>
+								<p><strong>Solution:</strong> {@html version.solution}</p>
+								<p><strong>Comments:</strong> {@html version.comment}</p>
+								<button on:click={() => restoreVersion(allVersions.length - index - 1)}>Restore Version</button>
+							</div>
+						</details>
 						{/each}
 					{:else}
   						<p>No versions available</p>
@@ -877,28 +969,41 @@ function recordDiff(original = '', edited = '') {
   p {
     margin: 5px 0;
   }
-	  /* Styling for added and removed text */
-	.added {
-    	color: green;
-    	font-weight: bold;
-  	}
-  	.removed {
-    	color: red;
-    	text-decoration: line-through;
-  	}
 
-  	.editHistory {
-    	margin-top: 20px;
-    	background: #f5f5f5;
-    	padding: 10px;
-    	border-radius: 5px;
-  	}
+summary {
+    display: flex;
+    justify-content: space-between; /* Pushes the arrow to the right */
+    align-items: center; /* Vertically center the text and arrow */
+    cursor: pointer;
+}
 
-  	.historyItem {
-    	margin-bottom: 15px;
-  	}
+details[open] summary .arrow {
+    transform: rotate(90deg); /* Rotate the arrow 90 degrees */
+}
 
-  	.diffContent {
-    	padding-left: 20px;
-  	}
+.arrow {
+    font-size: 20px; 
+    margin-left: 10px; 
+}
+
+.details-content {
+    padding-left: 20px;
+    transition: max-height 0.3s ease;
+    overflow: hidden;
+}
+
+.restored-version .details-content {
+    background-color: #f0f0f0; /* Light gray background */
+    border: 1px solid #ddd; /* Optional: subtle border */
+    padding: 10px;
+    border-radius: 4px; /* Rounded corners for a softer look */
+}
+
+.restored-label {
+    font-size: 0.9em;
+    color: #007bff;
+    margin-left: 10px;
+    font-style: italic;
+}
+
 </style>
