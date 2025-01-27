@@ -13,6 +13,9 @@
 		uploadImage,
 	} from "$lib/supabase";
 
+	import { getProblemEmbedding } from "$lib/supabase/problems";
+	import { get } from "svelte/store";
+
 	let authorName = "";
 	let openModal = false;
 	let problem_id = 0;
@@ -27,6 +30,7 @@
 
 	async function submitProblem(payload) {
 		authorName = await getAuthorName((await getThisUser()).id);
+		
 
 		console.log(payload);
 		try {
@@ -36,6 +40,12 @@
 			if (payload.topics.length == 0) {
 				throw new Error("Must specify at least one topic for this problem");
 			} else {
+				const embedding = await getProblemEmbedding(payload);
+
+				// console.log("stuff", await getProblemEmbedding(payload));
+				// console.log("add embedding", embedding);
+				payload.embedding = embedding;
+				console.log("add embedding", payload);
 				const data = await createProblem(payload);
 
 				let imageDownloadResult = await ImageBucket.downloadLatexImages(

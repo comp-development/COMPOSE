@@ -12,6 +12,7 @@ CREATE OR REPLACE VIEW full_problems WITH (security_invoker) AS
         problems.nickname,
         problems.comment_latex,
         problems.edited_at,
+        problems.embedding,
         users.full_name,
         users.initials || problems.id AS front_id,
         topics.topics,

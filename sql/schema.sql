@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS problems (
     answer_latex text,
     solution_latex text,
     difficulty int,
+    embedding vector(1536),
     sub_topics text,
     nickname text,
     comment_latex text,

@@ -24,6 +24,7 @@ export interface ProblemRequest {
 	nickname?: string;
 	sub_topics?: string;
 	image_name?: string;
+	embedding?: number[];
 }
 
 export interface ProblemSelectRequest {
@@ -504,4 +505,176 @@ export async function getProblemLeaderboard() {
 	let { data, error } = await selectQuery;
 	if (error) throw error;
 	return data;
+}
+
+/**
+ * Updates the embedding for a problem using OpenAI's embedding API
+ */
+export async function updateProblemEmbedding(problem: any) {
+
+    const combined_text = [
+        problem.problem_latex,
+        problem.solution_latex,
+        problem.answer_latex,
+        problem.comment_latex,
+        problem.difficulty,
+        problem.sub_topics,
+        problem.topics,
+        problem.problem_tests
+    ].filter(Boolean).join(' ');
+
+	if(problem.id === 113) {
+		console.log("TEXT",combined_text);
+	}
+
+
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer `,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            input: combined_text,
+            model: 'text-embedding-ada-002'
+        })
+    });
+
+
+    const { data } = await response.json();
+    const embedding = data[0].embedding;
+
+    const { error } = await supabase
+        .from('problems')
+        .update({ embedding })
+        .eq('id', problem.id);
+
+    if (error) throw error;
+}
+
+export async function getProblemEmbedding(problem: any) {
+
+    const combined_text = [
+        problem.problem_latex,
+        problem.solution_latex,
+        problem.answer_latex,
+        problem.comment_latex,
+        problem.difficulty,
+        problem.sub_topics,
+        problem.topics,
+        problem.problem_tests
+    ].filter(Boolean).join(' ');
+	console.log(combined_text);
+
+	if(problem.id === 113) {
+		console.log("TEXT",combined_text);
+	}
+
+
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer `,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            input: combined_text,
+            model: 'text-embedding-ada-002'
+        })
+    });
+
+
+    const { data } = await response.json();
+    const embedding = data[0].embedding;
+	console.log(embedding);
+    return embedding;
+
+    // if (error) throw error;
+}
+
+/**
+ * Updates embeddings for all problems in the database
+ */
+export async function updateAllProblemEmbeddings() {
+
+
+    const { data: problems, error: fetchError } = await supabase.from('full_problems').select('*');
+
+
+	console.log("something hapened")
+	console.log(problems.length);
+
+    // if (fetchError) throw fetchError;
+
+    let updated = 0;
+    let errors = 0;
+
+    for (const problem of problems) {
+		if(problem.id !== 113 && problem.id !== 114) {
+			continue;
+		}
+        try {
+            await updateProblemEmbedding(problem);
+            updated++;
+        } catch (error) {
+            console.error(`Error updating problem ${problem.id}:`, error);
+            errors++;
+        }
+        // Add a small delay to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    return { updated, errors };
+}
+
+/**
+ * Semantic search for problems
+ *
+ * @param query string
+ * @param limit number
+ * @returns list of problems
+ */
+export async function semanticSearch(query: string, limit: number = 10) {
+	console.log("Called");
+
+	const response = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            input: query,
+            model: 'text-embedding-ada-002'
+        })
+    });
+
+	console.log(response);
+
+	const { data: query_embedding } = await response.json();
+
+	// console.log(embedding);
+
+    const embedding = query_embedding[0].embedding;
+
+	console.log(embedding);
+
+
+	console.log("EMBEDDING", embedding);
+
+    const { data: problems, error } = await supabase
+        .rpc('search_problems', {
+            query_embedding: embedding,
+            match_count: limit
+        });
+
+	// const { data: problems, error } = await supabase.from('full_problems').select('*');
+
+	console.log("PROBLEMS", problems.length);
+
+    if (error) throw error;
+	const problem_ids = problems.map((problem) => problem.id);
+	console.log(problem_ids);
+	console.log("PROBLEMS", problems);
+    return problems;
 }

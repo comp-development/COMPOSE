@@ -73,7 +73,7 @@
 			console.log(curMessage.content);
 			const regex = /```javascript(.*?)```/s;
 			const match = curMessage.content.match(regex);
-			console.log(match);
+			console.log("MATCH", match);
 			let codeBlock = curMessage.content;
 			if (match) {
 				codeBlock = match[1].trim();

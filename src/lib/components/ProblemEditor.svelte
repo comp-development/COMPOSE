@@ -180,6 +180,7 @@
 						status: status,
 					};
 					submittedText = "Submitting problem...";
+					console.log("submitting", payload);
 					await onSubmit(payload);
 					submittedText = isDraft ? "Draft Saved" : "Problem Submitted";
 				}

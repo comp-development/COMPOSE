@@ -6,7 +6,7 @@
 	import ProblemList from "$lib/components/ProblemList.svelte";
 	import ProgressBar from "$lib/components/ProgressBar.svelte";
 	import Button from "$lib/components/Button.svelte";
-	import { Checkbox, TextArea } from "carbon-components-svelte";
+	import { Checkbox, TextArea, Search } from "carbon-components-svelte";
 	import { onMount } from "svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
@@ -14,6 +14,8 @@
 	import { Chart, registerables } from 'chart.js';
 	import annotationPlugin from 'chartjs-plugin-annotation';
 	import { LightenDarkenColor } from "$lib/utils/Colors.svelte";
+
+	import { semanticSearch } from "$lib/supabase/problems";
 
 	import {
 		getImages,
@@ -464,139 +466,192 @@
 		}
 	}
 	
-</script>
+	let searchQuery = "";
+	let isSemanticSearching = false;
 
+	async function performSemanticSearch() {
+		console.log("PROBLEMSPRESEM", problems);
+		try {
+			isSemanticSearching = true;
+			// const response = await fetch('/api/semantic-search', {
+			// 	method: 'POST',
+			// 	headers: { 'Content-Type': 'application/json' },
+			// 	body: JSON.stringify({ query: searchQuery })
+			// });
+
+			const response = await semanticSearch(searchQuery, 10);
+			
+			// if (!response.ok) throw new Error('Search failed');
+			
+			// const { problems: searchResults } = await response.json();
+			// problems = searchResults;
+			problems = response;
+			console.log(problems)
+		} catch (error) {
+			handleError(error);
+			toast.error('Search failed: ' + error.message);
+		} finally {
+			isSemanticSearching = false;
+		}
+	}
+
+	$: if (searchQuery === "") {
+		resetProblems();
+	}
+</script>
 
 <svelte:window bind:outerWidth={width} />
 
-
-
-<br />
-<h1>Problem Inventory</h1>
-{#if !loaded}
-	<p>Loading problems...</p>
-{/if}
-
-<div style="margin-top: 10px;">
-	<Button title="Create a new problem" href="/problems/new" />
-</div>
-<br />
-<div class="flex">
-	<div class="stats">
-		<h4><u>Stats</u></h4>
-		{#if loaded}
-		<!-- <Line data={time_filtered_problems.length} width={100}, height={50}, options={{maintainAspectRatio: false}} /> -->
-		
-		
-			<ProgressBar
-				value={time_filtered_problems.length}
-				max={scheme.progress.goal}
-				helperText={time_filtered_problems.length +
-					"/" +
-					scheme.progress.goal +
-					" problems written"}
-				labelText={"Tournament Progress"}
-			/>
-		{/if}
-		<p>
-			<strong>Number of Problems: {all_problems.length}</strong>
-		</p>
-		{#each Object.entries(problemCounts) as [cat, count]}
-			<p>
-				<!-- prettier-ignore -->
-				<strong>{cat} Problems:</strong>
-				{count}
-			</p>
-		{/each}
-		<canvas id="testChart"></canvas>
-	</div>
-	
-</div>
-<!--
-<Button
-	action={() => {
-		openModal = !openModal;
-	}}
-	title="Download All Problems"
-/>
-<br /><br />
--->
-<!--
-<Button
-	action={() => {
-		problemList.set(
-			problems.filter((problem) => {
-				return problem.author_id == userId;
-			})
-		);
-	}}
-	title="My Problems"
-/>
-<br /><br />-->
-<!--
-<ul visibility: hidden>
-	{#each $messages as message}
-		<li>{message.role}: {message.content}</li>
-	{/each}
-</ul>
-<div style="width:80%; margin: auto;margin-bottom: 20px;">
-	<form on:submit={submitWrapper}>
-		<TextArea
-			class="textArea"
-			labelText="Use CASSIE to filter (Beta)!"
-			placeholder="Type some sort of command to filter (e.g. Show me all problems with difficulty harder than 4 and sort it hardest to easiest.). You can build queries off of the previous one."
-			bind:value={$input}
-			required={true}
+<div class="container">
+	<div class="search-container">
+		<Search
+			placeholder="Search problems semantically (e.g., 'Hard geometry problems involving circles')"
+			bind:value={searchQuery}
+			on:clear={() => {
+				searchQuery = "";
+				resetProblems();
+			}}
 		/>
-		<br />
-		<Button type="submit" title="Apply Filter" />
-	</form>
-</div>
-<Button action={resetProblems} title="Clear Filter" />
--->
-<br /><br />
-<div style="width:80%; margin: auto;margin-bottom: 20px;">
-	<ProblemList {problems} />
-</div>
-
-{#if openModal}
-	<div
-		class="flex"
-		style="background-color: rgba(0,0,0,0.5); position: absolute; top: 0; bottom: 0;right:0;left: 0;z-index: 100;"
-	>
-		<div
-			style="width: 300px; height: max-content; z-index: 101;background-color: white;padding: 10px;position: relative;"
-		>
-			<div style="position: absolute; top: 5px; right: 8px;">
-				<button
-					on:click={() => {
-						openModal = !openModal;
-					}}
-					style="font-size: 12px;cursor:pointer;outline: none;border: none;background: none;"
-					><i class="fa-solid fa-x" /></button
-				>
-			</div>
-
-			<p><strong>PDF Options</strong></p>
-
-			{#each values as value}
-				<Checkbox bind:group labelText={value} {value} />
-			{/each}
-
-			<br />
-			<button on:click={openProblemsPDF}>Download Problems</button>
-			<br /><br />
-		</div>
+		<Button
+			title={isSemanticSearching ? "Searching..." : "Search"}
+			action={isSemanticSearching ? null : performSemanticSearch}
+		/>
 	</div>
-{/if}
+</div>
 
-<style>
-	.stats {
-		background-color: white;
-		border: 1px solid var(--primary);
-		width: 80%;
-		margin: 10px;
-		text-align: left;
-		padding: 10px;
-	}
-</style>
+	<br />
+	<h1>Problem Inventory</h1>
+	{#if !loaded}
+		<p>Loading problems...</p>
+	{/if}
+
+	<div style="margin-top: 10px;">
+		<Button title="Create a new problem" href="/problems/new" />
+	</div>
+	<br />
+	<div class="flex">
+		<div class="stats">
+			<h4><u>Stats</u></h4>
+			{#if loaded}
+			<!-- <Line data={time_filtered_problems.length} width={100}, height={50}, options={{maintainAspectRatio: false}} /> -->
+			
+			
+				<ProgressBar
+					value={time_filtered_problems.length}
+					max={scheme.progress.goal}
+					helperText={time_filtered_problems.length +
+						"/" +
+						scheme.progress.goal +
+						" problems written"}
+					labelText={"Tournament Progress"}
+				/>
+			{/if}
+			<p>
+				<strong>Number of Problems: {all_problems.length}</strong>
+			</p>
+			{#each Object.entries(problemCounts) as [cat, count]}
+				<p>
+					<!-- prettier-ignore -->
+					<strong>{cat} Problems:</strong>
+					{count}
+				</p>
+			{/each}
+			<canvas id="testChart"></canvas>
+		</div>
+		
+	</div>
+	<!--
+	<Button
+		action={() => {
+			openModal = !openModal;
+		}}
+		title="Download All Problems"
+	/>
+	<br /><br />
+	-->
+	<!--
+	<Button
+		action={() => {
+			problemList.set(
+				problems.filter((problem) => {
+					return problem.author_id == userId;
+				})
+			);
+		}}
+		title="My Problems"
+	/>
+	<br /><br />-->
+	<!--
+	<ul visibility: hidden>
+		{#each $messages as message}
+			<li>{message.role}: {message.content}</li>
+		{/each}
+	</ul>
+	<div style="width:80%; margin: auto;margin-bottom: 20px;">
+		<form on:submit={submitWrapper}>
+			<TextArea
+				class="textArea"
+				labelText="Use CASSIE to filter (Beta)!"
+				placeholder="Type some sort of command to filter (e.g. Show me all problems with difficulty harder than 4 and sort it hardest to easiest.). You can build queries off of the previous one."
+				bind:value={$input}
+				required={true}
+			/>
+			<br />
+			<Button type="submit" title="Apply Filter" />
+		</form>
+	</div>
+	<Button action={resetProblems} title="Clear Filter" />
+	-->
+	<br /><br />
+	<div style="width:80%; margin: auto;margin-bottom: 20px;">
+		<ProblemList {problems} />
+	</div>
+
+	{#if openModal}
+		<div
+			class="flex"
+			style="background-color: rgba(0,0,0,0.5); position: absolute; top: 0; bottom: 0;right:0;left: 0;z-index: 100;"
+		>
+			<div
+				style="width: 300px; height: max-content; z-index: 101;background-color: white;padding: 10px;position: relative;"
+			>
+				<div style="position: absolute; top: 5px; right: 8px;">
+					<button
+						on:click={() => {
+							openModal = !openModal;
+						}}
+						style="font-size: 12px;cursor:pointer;outline: none;border: none;background: none;"
+						><i class="fa-solid fa-x" /></button
+					>
+				</div>
+
+				<p><strong>PDF Options</strong></p>
+
+				{#each values as value}
+					<Checkbox bind:group labelText={value} {value} />
+				{/each}
+
+				<br />
+				<button on:click={openProblemsPDF}>Download Problems</button>
+				<br /><br />
+			</div>
+		</div>
+	{/if}
+
+	<style>
+		.stats {
+			background-color: white;
+			border: 1px solid var(--primary);
+			width: 80%;
+			margin: 10px;
+			text-align: left;
+			padding: 10px;
+		}
+		.search-container {
+			display: flex;
+			gap: 1rem;
+			margin-bottom: 1rem;
+			width: 100%;
+			max-width: 800px;
+		}
+	</style>
