@@ -1,5 +1,7 @@
 import { WebhookClient } from "discord.js";
 import {fetchSettings} from "$lib/supabase";
+import dotenv from 'dotenv';
+dotenv.config()
 
 let scheme = {};
 
@@ -10,8 +12,8 @@ async function loadSettings() {
 
 export async function POST({ request }) {
 	await loadSettings();
-	let token = import.meta.env.VITE_CLIENT_TOKEN;
-	let id = import.meta.env.VITE_CLIENT_ID;
+	let token = process.env.BOT_TOKEN;
+	let id = process.env.VITE_CLIENT_ID;
 	const body = await request.json();
 
 	try {

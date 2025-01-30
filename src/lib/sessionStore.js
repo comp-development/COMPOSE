@@ -1,7 +1,7 @@
 import { writable } from "svelte/store";
 import { browser } from "$app/environment";
 
-export const user = writable("not loaded");
+export const user = writable(null);
 
 const defaultProblems = JSON.stringify([]);
 let storedProblemList = defaultProblems;

@@ -4,6 +4,6 @@
  * @param error Error
  */
 export function handleError(error: Error) {
-	console.log(error.message);
-	console.log(error);
+	console.error(error.message);
+	console.error(error);
 }

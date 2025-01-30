@@ -19,7 +19,9 @@ import config from "./config.js";
  * bot, and see the list of requested scopes.
  */
 export function getOAuthUrl(userId) {
+	console.log("config", config);
 	const state = uuidv4();
+	console.log("STATE", state);
 	const url = new URL("https://discord.com/api/oauth2/authorize");
 	url.searchParams.set("client_id", config.DISCORD_CLIENT_ID);
 	url.searchParams.set("redirect_uri", config.DISCORD_REDIRECT_URI);
@@ -36,10 +38,12 @@ export function getOAuthUrl(userId) {
  * OAuth2 service to retreive an access token, refresh token, and expiration.
  */
 export async function getOAuthTokens(code) {
+	console.log("client_id", config.DISCORD_CLIENT_ID);
+	console.log("client_secret", config.DISCORD_CLIENT_SECRET);
+	console.log("code", code);
+	console.log("redirect_uri", config.DISCORD_REDIRECT_URI);
 	const url = "https://discord.com/api/v10/oauth2/token";
 	const body = new URLSearchParams({
-		client_id: config.DISCORD_CLIENT_ID,
-		client_secret: config.DISCORD_CLIENT_SECRET,
 		grant_type: "authorization_code",
 		code,
 		redirect_uri: config.DISCORD_REDIRECT_URI,
@@ -50,8 +54,10 @@ export async function getOAuthTokens(code) {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/x-www-form-urlencoded",
+			"Authorization": `Basic ${Buffer.from(`${config.DISCORD_CLIENT_ID}:${config.DISCORD_CLIENT_SECRET}`).toString('base64')}`,
 		},
 	});
+	console.log("response", response);
 	if (response.ok) {
 		const data = await response.json();
 		return data;

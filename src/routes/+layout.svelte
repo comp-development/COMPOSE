@@ -10,10 +10,10 @@
 	import { page } from "$app/stores";
 	import { Toaster } from "svelte-french-toast";
 	import { getThisUser } from "$lib/supabase";
-	import { fetchSettings } from "$lib/supabase/settings"; // Import fetchSettings
+	import { defaultSettings, fetchSettings } from "$lib/supabase/settings"; // Import fetchSettings
 	let loaded = false;
 	let hasAccount = true;
-	let scheme = {}; // Initialize scheme variable
+	let scheme = defaultSettings; // Initialize scheme variable
 
 	(async () => {
 		user.set(await getThisUser());
@@ -57,7 +57,7 @@
 		<div class="loadingPage flex">
 			<Loading />
 		</div>
-	{:else if !$user && hasAccount && $page.route.id != "/password-reset"}
+	{:else if !$user && hasAccount && $page.route.id != "/password-request"}
 		<Banner />
 		<br />
 		<div class="flex">
@@ -78,7 +78,7 @@
 							}}>Sign-Up</button
 						>
 						<button size="lg" class="link" id="forgotPassword"
-							><a href="/password-reset" style="color: black;"
+							><a href="/password-request" style="color: black;"
 								>Forgot Password</a
 							></button
 						>
@@ -86,7 +86,7 @@
 				</div>
 			</div>
 		</div>
-	{:else if !$user && !hasAccount && $page.route.id != "/password-reset"}
+	{:else if !$user && !hasAccount && $page.route.id != "/password-request"}
 		<Banner />
 		<br />
 		<div class="flex">
@@ -109,7 +109,7 @@
 							Log-In
 						</button>
 						<button size="lg" class="link" id="forgotPassword"
-							><a href="/password-reset" style="color: black;"
+							><a href="/password-request" style="color: black;"								
 								>Forgot Password</a
 							></button
 						>

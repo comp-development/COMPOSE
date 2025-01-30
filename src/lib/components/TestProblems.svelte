@@ -24,6 +24,7 @@
 		};
 	console.log("FEDBACK", problemFeedback);
 	export let problem;
+	console.log("PROBLEM", problem);
 	export let problemNumber = null;
 	export let testsolve_id = null;
 	export let user_id = null;

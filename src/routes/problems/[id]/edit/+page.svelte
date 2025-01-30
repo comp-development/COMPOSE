@@ -60,7 +60,6 @@
 	};
 
 	async function submitProblem(payload) {
-		try {
 			const { topics, problem_files, ...payloadNoTopics } = payload;
 			const data = await editProblem(payloadNoTopics, Number($page.params.id));
 			console.log("DATA", data);
@@ -83,10 +82,6 @@
 
 			dirty = false;
 			toast.success("Successfully updated problem.");
-		} catch (error) {
-			handleError(error);
-			toast.error(error.message);
-		}
 		/** ENDPOINT NEEDS TO BE FIXED
 		try {
 			// Update discord webhook.

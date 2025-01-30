@@ -50,7 +50,7 @@ export async function GET({ request, url, cookies }) {
 				status: 403,
 			});
 		}
-
+		console.log("STATE VERIFICATION COMPLETED")
 		const tokens = await discord.getOAuthTokens(code);
 
 		// 2. Uses the Discord Access Token to fetch the user profile

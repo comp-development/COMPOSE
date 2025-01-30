@@ -29,52 +29,38 @@
 		authorName = await getAuthorName((await getThisUser()).id);
 
 		console.log(payload);
-		try {
-			if (authorName === "") {
-				throw new Error("Author name is not defined");
-			}
-			if (payload.topics.length == 0) {
-				throw new Error("Must specify at least one topic for this problem");
-			} else {
-				const { topics, problem_files, ...payloadNoTopics } = payload;
-				console.log(payloadNoTopics);
-				const data = await createProblem(payloadNoTopics);
+		if (authorName === "") {
+			throw new Error("Author name is not defined");
+		}
+		if (payload.topics.length == 0) {
+			throw new Error("Must specify at least one topic for this problem");
+		} else {
+			const data = await createProblem(payload);
 
-				let problemId = data.id;
-				await insertProblemTopics(problemId, payload.topics);
-
-				for (const file of problem_files) {
-					await uploadImage(`pb${problemId}/problem/${file.name}`, file);
-				}
-
-				let imageDownloadResult = await ImageBucket.downloadLatexImages(
-					payload.problem_latex
+			let imageDownloadResult = await ImageBucket.downloadLatexImages(
+				payload.problem_latex
+			);
+			let imageName = "";
+			if (imageDownloadResult.images.length > 0) {
+				imageName = await ImageBucket.getImageURL(
+					imageDownloadResult.images[0].name
 				);
-				let imageName = "";
+			} else {
+				imageDownloadResult = await ImageBucket.downloadLatexImages(
+					payload.solution_latex
+				);
 				if (imageDownloadResult.images.length > 0) {
 					imageName = await ImageBucket.getImageURL(
 						imageDownloadResult.images[0].name
 					);
-				} else {
-					imageDownloadResult = await ImageBucket.downloadLatexImages(
-						payload.solution_latex
-					);
-					if (imageDownloadResult.images.length > 0) {
-						imageName = await ImageBucket.getImageURL(
-							imageDownloadResult.images[0].name
-						);
-					}
 				}
-
-				openModal = true;
-				problem_id = problemId;
-				//window.location.replace(`/problems/${problemId}`);
 			}
-			dirty = false;
-		} catch (error) {
-			handleError(error);
-			toast.error(error.message);
+
+			openModal = true;
+			problem_id = data.id;
+			//window.location.replace(`/problems/${problemId}`);
 		}
+		dirty = false;
 	}
 </script>
 

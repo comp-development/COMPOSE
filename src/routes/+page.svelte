@@ -3,31 +3,30 @@
 	import {
 		Form,
 		TextInput,
-		NumberInput,
 		TextArea,
 	} from "carbon-components-svelte";
 	import Button from "$lib/components/Button.svelte";
 	import toast from "svelte-french-toast";
+	import { get } from "svelte/store";
 	import { handleError } from "$lib/handleError.ts";
+	import { user } from "$lib/sessionStore";
 	import Header from "$lib/components/styles/Header.svelte";
-	import { getThisUser, getUser, upsertUserData } from "$lib/supabase";
+	import { getUser, upsertUserData } from "$lib/supabase";
 	export let data;
-	let user;
-	let loading = false;
+
 	let full_name;
 	let discord;
 	let discord_id;
 	let initials;
-	let quote;
 	let math_comp_background;
 	let amc_score;
 
-	const getProfile = async () => {
-		try {
-			loading = true;
-			user = await getThisUser();
-			const data = await getUser(user.id);
+	let user_id;
 
+	user.subscribe(async (v) => {
+		try {
+			user_id = v.id;
+			data = await getUser(user_id);
 			({
 				full_name,
 				discord,
@@ -36,10 +35,6 @@
 				amc_score,
 				discord_id,
 			} = data);
-
-			/**if (discord.includes("#")) {
-				throw new Error("Must update discord username from discriminator");
-			}*/
 		} catch (error) {
 			if (error.code === "PGRST116" || error.message.includes("Cannot read properties of null")) {
 				// no user
@@ -52,13 +47,11 @@
 				handleError(error);
 				toast.error(error.message);
 			}
-		} finally {
-			loading = false;
-		}
-	};
+		} 
+	});
 
 	function discordAuth() {
-		window.location.replace(`/api/linked-role?userId=${user.id}`);
+		window.location.replace(`/api/linked-role?userId=${user_id}`);
 	}
 
 	async function updateProfile(e) {
@@ -80,18 +73,13 @@
 				throw new Error("Initials must be all uppercase letters");
 			} /**else if (amc_score < 0 || amc_score > 150) {
 				throw new Error("AMC Score needs to be valid");
-			} */ else if (math_comp_background.length <= 0) {
-				throw new Error("Math competition background cannot be empty");
-			} else {
-				loading = true;
-				const user = await getThisUser();
-
+			} */ else {
 				const updates = {
-					id: user.id,
+					id: get(user).id,
 					full_name,
 					initials,
 					math_comp_background,
-					email: user.email,
+					email: get(user).email,
 				};
 
 				await upsertUserData(updates);
@@ -106,12 +94,9 @@
 				handleError(error);
 				toast.error(error.message);
 			}
-		} finally {
-			loading = false;
 		}
 	}
 
-	getProfile();
 </script>
 
 <Header fontSize="5em" type="level1">Welcome, {full_name}</Header>
@@ -157,7 +142,7 @@
 			</div>
 			<br />
 			<TextArea
-				placeholder="Math Competition Background"
+				placeholder="Background"
 				class="inputField"
 				bind:value={math_comp_background}
 			/> <br />

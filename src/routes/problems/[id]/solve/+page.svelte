@@ -1,4 +1,5 @@
 <script lang="js">
+    import { page } from "$app/stores";
 	import TestProblems from "$lib/components/TestProblems.svelte";
     import Button from "$lib/components/Button.svelte";
     import Loading from "$lib/components/Loading.svelte";
@@ -15,7 +16,6 @@
 	let lastTime = startTime;
 	let reviewing = false;
     let problems = [];
-    $: currentProblem = problems[curIndex];
     let curIndex = 0;
 	let problemFeedback = 
 		{
@@ -72,7 +72,8 @@
 			if (!user_id) {
 				user_id = (await getThisUser()).id;
 			}
-            problems = await getRandomProblems(user_id);
+            problems = [await getProblem(Number($page.params.id))];
+            console.log("PROBLEMS", problems)
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
@@ -95,7 +96,7 @@
         <h4><strong>Give Feedback:</strong></h4>
         {#if curIndex < problems.length}
             <div class="problems">
-                <TestProblems bind:problemFeedback={problemFeedback} problem={currentProblem} {reviewing} givingFeedback={true} autoUpdate={false}></TestProblems>
+                <TestProblems bind:problemFeedback={problemFeedback} problem={problems[curIndex]} {reviewing} givingFeedback={true} autoUpdate={false}></TestProblems>
             </div>
             <div class = "submit-button">
             {#if !reviewing}

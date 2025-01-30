@@ -7,6 +7,7 @@
 	import rehypeStringify from "rehype-stringify";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
+	import { onMount } from "svelte";
 
 	export let style = "";
 	export let value;
@@ -30,7 +31,16 @@
 		}
 	}
 
-	loadLatex();
+	onMount(() => {
+		loadLatex();
+	});
+
+	// Reactive statement to reload LaTeX when value changes
+	$: {
+		if (value) {
+			loadLatex();
+		}
+	}
 </script>
 
 {#if rendered}

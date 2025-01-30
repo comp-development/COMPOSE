@@ -11,6 +11,10 @@
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
 	import { fetchSettings } from "$lib/supabase/settings";
+	import { Chart, registerables } from 'chart.js';
+	import annotationPlugin from 'chartjs-plugin-annotation';
+	import { LightenDarkenColor } from "$lib/utils/Colors.svelte";
+
 	import {
 		getImages,
 		getProblemCounts,
@@ -19,7 +23,9 @@
 		getProblemFeedback,
 	} from "$lib/supabase";
 	import { List, Schematics } from "carbon-icons-svelte";
-
+	Chart.register(...registerables);
+	Chart.register(annotationPlugin);
+	
 	const datasetPrompt = `
 		The database you have access to is a view called full_problems. English descriptions of the database columns with each column type in parenthesis are given below:
 			answer_latex (string | null): The answer to the problem written in LaTeX;  
@@ -93,11 +99,44 @@
 			all_problems = await getProblems({ customSelect: "*" });
 			console.log("PROBLEMS", problems);
 			console.log(scheme.progress.after);
-			time_filtered_problems = await getProblems({
-				after: new Date(scheme.progress.after),
-				before: new Date(scheme.progress.before),
-			});
-			console.log(time_filtered_problems.length);
+			resetProblems();
+			loaded = true;
+			time_filtered_problems = await getProblems();
+			time_filtered_problems = sortByDate(time_filtered_problems, 'created_at');
+			
+			// console.log(time_filtered_problems)
+
+			const x_times = [];
+			const y_times = {};
+			var j = 0;
+
+			// Calculate the number of days between the after date and now
+			const daysDiff = Math.floor((Date.now() - Date.parse(scheme.progress.after)) / (1000 * 60 * 60 * 24));
+
+			for (let i = 0; i <= daysDiff; i++) {
+				const time = new Date(Date.parse(scheme.progress.after) + i * 24 * 60 * 60 * 1000); // Increment by day
+				x_times.push(time.toLocaleString("en-US").split(",")[0]);
+				while (j < time_filtered_problems.length && new Date(Date.parse(time_filtered_problems[j].created_at)) - time <= 0) {
+					if (y_times[time_filtered_problems[j].status] == null) {
+						y_times[time_filtered_problems[j].status] = [0];
+					}
+					const cur = y_times[time_filtered_problems[j].status][y_times[time_filtered_problems[j].status].length - 1];
+
+					while (y_times[time_filtered_problems[j].status].length < i + 1) {
+						y_times[time_filtered_problems[j].status].push(cur);
+					}
+					y_times[time_filtered_problems[j].status][y_times[time_filtered_problems[j].status].length - 1] += 1;
+					j++;
+				}
+			}
+
+			for (const key of Object.keys(y_times)){
+				while (y_times[key].length < x_times.length){
+					y_times[key].push(y_times[key][y_times[key].length-1])
+				}
+			}
+
+
 
 			if (!problems.length) {
 				problemList.set([...all_problems]);
@@ -131,15 +170,143 @@
 				return sortedObj;
 			}, {});
 			userId = (await getThisUser()).id;
-			//getProblemLink();
-			resetProblems();
-			loaded = true;
+			const ctx = document.getElementById('testChart').getContext('2d');
+
+			const labels = x_times;
+			let primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-tint').trim();
+			let ideaColor = LightenDarkenColor(getComputedStyle(document.documentElement).getPropertyValue('--primary-light').trim(), 60); // Lighten by 20%
+			let endorseColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-light').trim();
+			let onTestColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+			let publishedColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-dark').trim();
+			const pointRadius = 1;
+			const data = {
+				labels: labels,
+				datasets: [
+					{
+						label: 'Ideas',
+						data: y_times["Idea"],
+						fill: false,
+						borderColor: ideaColor,
+						tension: 0.1,
+						pointRadius
+					},
+					{
+						label: 'Endorsed',
+						data: y_times['Endorsed'],
+						fill: false,
+						borderColor: endorseColor,
+						tension: 0.1,
+						pointRadius
+					},
+					{
+						label: 'On Test',
+						data: y_times['On Test'],
+						fill: false,
+						borderColor: onTestColor,
+						tension: 0.1,
+						pointRadius
+					},
+					{
+						label: 'Published',
+						data: y_times['Published'],
+						fill: false,
+						borderColor: publishedColor,
+						tension: 0.1,
+						pointRadius
+					},
+				]
+			};
+
+			function formatDate(dateString) {
+				const date = new Date(dateString); // Set time to midnight
+				const options = { year: 'numeric', month: 'short', day: '2-digit' };
+				return date.toLocaleDateString('en-US', options);
+			}
+			const ideaGoal = scheme.progress.ideaGoal
+			const endorseGoal = scheme.progress.endorseGoal
+			const testGoal = scheme.progress.testGoal
+			const ideaDate = formatDate(scheme.progress.ideaDate) //scheme.progress.ideaDate
+			const endorseDate = formatDate(scheme.progress.endorseDate) //scheme.progress.endorseDate
+			const testDate = formatDate(scheme.progress.testDate) //scheme.progress.testDate
+			const options = {
+				scales: {
+					x: {
+						ticks: {
+							autoSkip: true, // Automatically skips some labels
+							maxTicksLimit: Math.ceil(daysDiff / 7), // Limit the number of ticks displayed to every 2 weeks
+						}
+					}
+				},
+				plugins: {
+					annotation: {
+						annotations: {
+							line1: {
+								type: 'line',
+								yMin: ideaGoal,
+								yMax: ideaGoal,
+								borderColor: ideaColor,
+								borderWidth: 2,
+								borderDash: [6,6],
+								label: {
+									content: `Idea Target by ${ideaDate}`,
+									enabled: true,
+									position: 'end',
+									backgroundColor: 'rgba(255, 255, 255, 0.8)',
+									color: ideaColor,
+								}
+							},
+							line2: {
+								type: 'line',
+								yMin: endorseGoal,
+								yMax: endorseGoal,
+								borderColor: endorseColor,
+								borderWidth: 2,
+								borderDash: [6,6],
+								label: {
+									content: `Endorsed Target by ${endorseDate}`,
+									enabled: true,
+									position: 'end',
+									backgroundColor: 'rgba(255, 255, 255, 0.8)',
+									color: endorseColor,
+								}
+							},
+							line3: {
+								type: 'line',
+								yMin: testGoal,
+								yMax: testGoal,
+								borderColor: testGoal,
+								borderWidth: 2,
+								borderDash: [6,6],
+								label: {
+									content: `On Test Target by ${testDate}`,
+									enabled: true,
+									position: 'end',
+									backgroundColor: 'rgba(255, 255, 255, 0.8)',
+									color: onTestColor,
+								}
+							}
+						}
+					}
+				}
+			};
+			let lineChart;
+
+			lineChart = new Chart(ctx, {type: 'line', data: data, options});
+				//getProblemLink();
+			
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
 		}
 	})();
 
+	function sortByDate(array, key){
+		return array.sort(function(a, b) {
+		var x = new Date(Date.parse(a[key]));
+		var y = new Date(Date.parse(b[key]));
+		return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+		});
+	}
 	function resetProblems() {
 		problemList.set([...all_problems]);
 	}
@@ -266,7 +433,7 @@
 
 			const resp = await fetch(
 				// make env variable before pushing
-				import.meta.env.VITE_PDF_GENERATOR_URL,
+				process.env.PDF_GENERATOR_URL,
 				{
 					method: "POST",
 					headers: {
@@ -296,9 +463,13 @@
 			toast.error(error.message);
 		}
 	}
+	
 </script>
 
+
 <svelte:window bind:outerWidth={width} />
+
+
 
 <br />
 <h1>Problem Inventory</h1>
@@ -314,6 +485,9 @@
 	<div class="stats">
 		<h4><u>Stats</u></h4>
 		{#if loaded}
+		<!-- <Line data={time_filtered_problems.length} width={100}, height={50}, options={{maintainAspectRatio: false}} /> -->
+		
+		
 			<ProgressBar
 				value={time_filtered_problems.length}
 				max={scheme.progress.goal}
@@ -334,7 +508,9 @@
 				{count}
 			</p>
 		{/each}
+		<canvas id="testChart"></canvas>
 	</div>
+	
 </div>
 <!--
 <Button

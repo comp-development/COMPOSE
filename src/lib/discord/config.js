@@ -4,12 +4,18 @@
  * configuration should not be checked into source control.
  */
 
+import dotenv from 'dotenv';
+dotenv.config()
+
 const config = {
-	DISCORD_TOKEN: import.meta.env.VITE_BOT_TOKEN,
-	DISCORD_CLIENT_ID: import.meta.env.VITE_CLIENT_ID,
-	DISCORD_CLIENT_SECRET: import.meta.env.VITE_CLIENT_SECRET,
-	DISCORD_REDIRECT_URI: import.meta.env.VITE_REDIRECT_URI,
-	COOKIE_SECRET: import.meta.env.VITE_COOKIE_SECRET,
+	GUILD_ID: process.env.GUILD_ID,
+	DISCORD_TOKEN: process.env.BOT_TOKEN,
+	DISCORD_CLIENT_ID: process.env.VITE_CLIENT_ID,
+	DISCORD_CLIENT_SECRET: process.env.CLIENT_SECRET,
+	DISCORD_REDIRECT_URI: process.env.VITE_BASE_URL + "/api/discord-oauth-callback",
+	COOKIE_SECRET: process.env.COOKIE_SECRET,
 };
+
+console.log("CONFIG", config);
 
 export default config;

@@ -108,6 +108,8 @@
 		<br />
 		<Button href="/problems" title="Back to Problems" />
 		<br /><br />
+		<Button href={"/problems/" + problem.id + "/solve"} title="Testsolve Problem" />
+		<br /><br />
 		<Button href={"/problems/" + problem.id + "/edit"} title="Edit Problem" />
 		<br />
 		<br />

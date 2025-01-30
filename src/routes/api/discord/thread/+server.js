@@ -1,6 +1,8 @@
 import {fetchSettings} from "$lib/supabase";
+import dotenv from 'dotenv';
+dotenv.config()
 
-const discordToken = import.meta.env.VITE_BOT_TOKEN;
+const discordToken = process.env.BOT_TOKEN;
 
 let scheme = {};
 

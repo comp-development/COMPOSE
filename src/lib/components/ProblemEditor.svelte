@@ -8,21 +8,21 @@
 		Button,
 	} from "carbon-components-svelte";
 	import toast from "svelte-french-toast";
+	import { onMount } from "svelte";
 
 	import { checkLatex } from "$lib/latexStuff";
 	import Problem from "$lib/components/Problem.svelte";
 	import LatexKeyboard from "$lib/components/editor/LatexKeyboard.svelte";
 	import ImageManager from "$lib/components/images/ImageManager.svelte";
+	import { user } from "$lib/sessionStore.js";
 	import { handleError } from "$lib/handleError.ts";
 	import { getGlobalTopics } from "$lib/supabase";
 	import { supabase } from "$lib/supabaseClient";
-	// import { diffWords } from 'diff';
 	import DiffMatchPatch from "diff-match-patch";
 
 	export let originalProblem = null;
 	export let originalImages = [];
 	export let onDirty = () => {};
-
 
 	// function that has the payload as argument, runs when submit button is pressed.
 	// if not passed in, submit button is not shown
@@ -91,9 +91,9 @@
 	const dmp = new DiffMatchPatch();
 
 	let problemHistory = []; // versions and patches
-	let allVersions = []; // contains reconstructed full versions
+	let allVersions = []; // contains reconstructed full versions with highlights
 
-	let lastVersion; // full text of the last version for comparison
+	let lastVersion; // full text of the last version for comparison without highlights
 	let allExpanded = false;
 
 	// Function to save a new version or patch to Supabase
@@ -102,7 +102,8 @@
 			const { data, error } = await supabase
 				.from("problems")
 				.update({ diffs: problemHistory })
-				.eq("id", originalProblem.id);
+				.eq("id", originalProblem.id)
+				.select("diffs");
 			if (error) throw error;
 			console.log("Version saved:", data);
 		} catch (err) {
@@ -131,7 +132,16 @@
 
 	// Function to repopulate `problemHistory` from Supabase
 	async function loadHistoryFromSupabase() {
-		const history = (await fetchVersionHistoryFromSupabase()) ?? [];
+		let history = [];
+		// Only try to fetch version history if problem previously existed.
+		if (originalProblem?.id) {
+			history = (await fetchVersionHistoryFromSupabase()) ?? [];
+			// Problem existed but had no version history, so populate the history  now.
+			if (history.length == 0) {
+				await addVersion();
+				history = (await fetchVersionHistoryFromSupabase()) ?? [];
+			}
+		}
 		problemHistory = history;
 		allVersions = showEditHistory(problemHistory); // Reconstruct full versions for display
 		if (problemHistory.length > 0) {
@@ -143,15 +153,6 @@
 	onMount(() => {
 		loadHistoryFromSupabase();
 	});
-
-	async function getCurrentUser() {
-		const { data, error } = await supabase.auth.getUser();
-		if (error) {
-			console.error("Failed to get user:", error.message);
-			return "unknown";
-		}
-		return data?.user || "unknown";
-	}
 
 	async function getPacificTime() {
 		const now = new Date();
@@ -173,7 +174,6 @@
 	}
 
 	async function addVersion() {
-		const user = await getCurrentUser();
 		const date = await getPacificTime();
 
 		const newVersion = {
@@ -182,7 +182,7 @@
 			answer: fields.answer,
 			solution: fields.solution,
 			kind: "version",
-			author: user.email,
+			author: $user.email,
 			timestamp: date,
 		};
 
@@ -213,9 +213,19 @@
 			answer: dmp.patch_make(lastVersion.answer, diffs.answer),
 			solution: dmp.patch_make(lastVersion.solution, diffs.solution),
 			kind: "patch",
-			author: user.email,
+			author: $user.email,
 			timestamp: date,
 		};
+
+		// If there's no difference, don't actually update the problemHistory.
+		if (
+			patch.problem.length == 0 &&
+			patch.comment.length == 0 &&
+			patch.answer.length == 0 &&
+			patch.solution.length == 0
+		) {
+			return;
+		}
 
 		problemHistory.push(patch);
 		await saveVersionToSupabase();
@@ -241,23 +251,12 @@
 				reconstructed = structuredClone(problemHistory[i]);
 			} else {
 				const patch = problemHistory[i];
+				const p = patch;
 
-				reconstructed.problem = dmp.patch_apply(
-					patch.problem,
-					reconstructed.problem
-				)[0];
-				reconstructed.comment = dmp.patch_apply(
-					patch.comment,
-					reconstructed.comment
-				)[0];
-				reconstructed.answer = dmp.patch_apply(
-					patch.answer,
-					reconstructed.answer
-				)[0];
-				reconstructed.solution = dmp.patch_apply(
-					patch.solution,
-					reconstructed.solution
-				)[0];
+				reconstructed.problem = applyPatch(reconstructed.problem, p.problem);
+				reconstructed.comment = applyPatch(reconstructed.comment, p.comment);
+				reconstructed.answer = applyPatch(reconstructed.answer, p.answer);
+				reconstructed.solution = applyPatch(reconstructed.solution, p.solution);
 
 				if (reconstructed.restoredFrom) delete reconstructed.restoredFrom;
 			}
@@ -276,64 +275,42 @@
 			timestamp: "",
 		};
 
-		let highlighted = {
-			problem: "",
-			comment: "",
-			answer: "",
-			solution: "",
-			author: "",
-			timestamp: "",
-		};
-
 		let reconstructedVersions = [];
 		let highlightedVersions = [];
 
 		problemHistory.forEach((historyItem) => {
-			// console.log(historyItem);
+			let highlighted = {
+				problem: "",
+				comment: "",
+				answer: "",
+				solution: "",
+				author: "",
+				timestamp: "",
+			};
+
 			if (historyItem.kind == "version") {
 				reconstructed = structuredClone(historyItem);
 				highlighted = structuredClone(historyItem);
-				//console.log("final", JSON.stringify(historyItem));
 			} else if (historyItem.kind == "patch") {
-				// console.log("final", JSON.stringify(historyItem));
 				const patch = historyItem;
+				const p = patch;
+				const highlight = highlightChanges;
 
-				highlighted.problem = highlightChanges(
-					reconstructed.problem,
-					patch.problem
-				);
-				highlighted.comment = highlightChanges(
-					reconstructed.comment,
-					patch.comment
-				);
-				highlighted.answer = highlightChanges(
-					reconstructed.answer,
-					patch.answer
-				);
-				highlighted.solution = highlightChanges(
-					reconstructed.solution,
-					patch.solution
-				);
+				highlighted.problem = highlight(reconstructed.problem, p.problem);
+				highlighted.comment = highlight(reconstructed.comment, p.comment);
+				highlighted.answer = highlight(reconstructed.answer, p.answer);
+				highlighted.solution = highlight(reconstructed.solution, p.solution);
 
-				reconstructed.problem = applyPatch(
-					reconstructed.problem,
-					patch.problem
-				);
-				reconstructed.comment = applyPatch(
-					reconstructed.comment,
-					patch.comment
-				);
-				reconstructed.answer = applyPatch(reconstructed.answer, patch.answer);
-				reconstructed.solution = applyPatch(
-					reconstructed.solution,
-					patch.solution
-				);
+				reconstructed.problem = applyPatch(reconstructed.problem, p.problem);
+				reconstructed.comment = applyPatch(reconstructed.comment, p.comment);
+				reconstructed.answer = applyPatch(reconstructed.answer, p.answer);
+				reconstructed.solution = applyPatch(reconstructed.solution, p.solution);
 
-				highlighted.author = patch.author;
-				highlighted.timestamp = patch.timestamp;
+				highlighted.author = p.author;
+				highlighted.timestamp = p.timestamp;
 
-				reconstructed.author = patch.author;
-				reconstructed.timestamp = patch.timestamp;
+				reconstructed.author = p.author;
+				reconstructed.timestamp = p.timestamp;
 
 				if (reconstructed.restoredFrom) delete reconstructed.restoredFrom; // only need for the actual restored version
 				if (highlighted.restoredFrom) delete highlighted.restoredFrom;
@@ -353,7 +330,6 @@
 	}
 
 	function highlightChanges(originalText, patch) {
-		// console.log(originalText);
 		// Apply the patch to get the updated text
 		const [patchedText] = dmp.patch_apply(patch, originalText);
 
@@ -395,26 +371,22 @@
 		);
 
 		event.preventDefault();
-		const user = await getCurrentUser();
 		const date = await getPacificTime();
 
 		if (
 			lastRestoredVersion === index ||
 			(index == problemHistory.length - 1 && problemHistory[index].restoredFrom)
 		) {
-			alert("This version has just been restored.");
+			toast.error("This version has just been restored.");
 			return;
 		}
 
 		let version = getVersion(index);
 
-		console.log("index", index);
-		console.log("restored", version);
-
 		const restoredVersion = {
 			...version,
 			kind: "version",
-			author: user.email,
+			author: $user.email,
 			restoredFrom: `Version ${index + 1}`,
 			timestamp: date,
 		};
@@ -509,10 +481,9 @@
 		try {
 			isDisabled = true;
 			if (
-				fields.problem &&
-				fields.comment &&
-				fields.answer &&
-				fields.solution &&
+				fields.problem.length > 0 &&
+				fields.answer.length > 0 &&
+				fields.solution.length > 0 &&
 				topics
 			) {
 				if (problemFiles.length > fileUploadLimit) {
@@ -570,11 +541,11 @@
 				throw new Error("Not all the required fields have been filled out");
 			}
 		} catch (error) {
+			submittedText = error.message;
 			handleError(error);
 			toast.error(error.message);
 		}
 	}
-	import { onMount } from "svelte";
 </script>
 
 <svelte:window on:click={updateActive} />
@@ -582,8 +553,8 @@
 {#if loading}
 	<p>Loading problem editor...</p>
 {:else}
-	<div class="row editorContainer" style="grid-template-columns: 70% 30%;">
-		<div class="col">
+	<div class="row editorContainer">
+		<div class="col" style="overflow: auto; resize: horizontal; width: 60vw;">
 			<Form class="editorForm">
 				<FormGroup style="display: flex; align-items: end;">
 					<MultiSelect
@@ -592,6 +563,7 @@
 						items={all_topics}
 						label={topicsStr}
 						required={true}
+						sortItem={(a, b) => 0}
 					/>
 					<TextInput
 						bind:value={subTopic}
@@ -860,6 +832,13 @@
 {/if}
 
 <style>
+	/* Resizable grid columns. See https://stackoverflow.com/a/53731196 */
+	.editorContainer {
+		grid-template:
+			1fr
+			/ min-content 1fr;
+	}
+
 	:global(.editorForm) {
 		padding: 20px;
 	}

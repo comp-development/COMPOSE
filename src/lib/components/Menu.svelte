@@ -88,6 +88,13 @@
 					</Link>
 					<br />
 					<Link
+						href="/leaderboard"
+						class={path == "leaderboard" ? "active link" : "link"}
+					>
+						<p class="linkPara">Leaderboard</p>
+					</Link>
+					<br />
+					<Link
 						href="/problems/feedback"
 						class={path == "problems/feedback" ? "active link" : "link"}
 					>

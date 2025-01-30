@@ -14,6 +14,5 @@ export async function GET({ request, url, cookies }) {
 	cookies.set("clientState", state, { maxAge: 1000 * 60 * 5, signed: true });
 	cookies.set("userId", userId, { maxAge: 1000 * 60 * 5 });
 	//cookies.set("userId", user.id, { maxAge: 1000 * 60 * 5 });
-
 	throw redirect(308, authUrl);
 }
