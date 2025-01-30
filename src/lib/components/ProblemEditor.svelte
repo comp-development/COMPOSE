@@ -1,5 +1,4 @@
 <script>
-// <script context="module">
 	import {
 		MultiSelect,
 		TextInput,
@@ -7,13 +6,10 @@
 		FormGroup,
 		TextArea,
 		Button,
-		FileUploader,
-		FileUploaderItem,
 	} from "carbon-components-svelte";
 	import toast from "svelte-french-toast";
 
-	import { displayLatex, checkLatex } from "$lib/latexStuff";
-	import { ProblemImage } from "$lib/getProblemImages";
+	import { checkLatex } from "$lib/latexStuff";
 	import Problem from "$lib/components/Problem.svelte";
 	import LatexKeyboard from "$lib/components/editor/LatexKeyboard.svelte";
 	import ImageManager from "$lib/components/images/ImageManager.svelte";
@@ -21,13 +17,12 @@
 	import { getGlobalTopics } from "$lib/supabase";
 	import { supabase } from "$lib/supabaseClient";
 	// import { diffWords } from 'diff';
-	import DiffMatchPatch from "diff-match-patch"; 
+	import DiffMatchPatch from "diff-match-patch";
 
 	export let originalProblem = null;
 	export let originalImages = [];
 	export let onDirty = () => {};
 
-	export let diffs;
 
 	// function that has the payload as argument, runs when submit button is pressed.
 	// if not passed in, submit button is not shown
@@ -50,7 +45,6 @@
 	let isDisabled = true;
 	let problemFailed = false;
 	let submittedText = "";
-	let error = "";
 	let show = true;
 
 	let fields = {
@@ -77,10 +71,7 @@
 
 	const fileUploadLimit = 5; // # of files that can be uploaded
 	const fileSizeLimit = 52428800; // 50 mb
-	let fileUploader;
 	let problemFiles = originalImages.map((x) => x.toFile());
-	let problemImages = [];
-	$: problemImages = problemFiles.map((x) => ProblemImage.fromFile(x));
 
 	let activeTextarea = null;
 	function updateActive() {
@@ -97,379 +88,367 @@
 		fields[fieldName] += fieldValue;
 	}
 
-const dmp = new DiffMatchPatch();
+	const dmp = new DiffMatchPatch();
 
-let problemHistory = []; // versions and patches
-let allVersions = []; // contains reconstructed full versions
-// const saveInterval = 5;
+	let problemHistory = []; // versions and patches
+	let allVersions = []; // contains reconstructed full versions
 
-let lastVersion; // full text of the last version for comparison
-let allExpanded = false;
+	let lastVersion; // full text of the last version for comparison
+	let allExpanded = false;
 
-// Function to save a new version or patch to Supabase
-async function saveVersionToSupabase() {
-    try {
-        const { data, error } = await supabase
-            .from("problems")
-            .update({ diffs: problemHistory })
-			.eq('id', originalProblem.id);
-        if (error) throw error;
-        console.log("Version saved:", data);
-    } catch (err) {
-        console.error("Failed to save version to Supabase:", err.message);
-    }
-}
-
-// Function to retrieve version history from Supabase
-async function fetchVersionHistoryFromSupabase() {
-    try {
-        const { data, error } = await supabase
-            .from("problems")
-            .select("diffs")
-			.eq('id', originalProblem.id)
-			.single();
-        if (error) throw error;
-        return data.diffs;
-    } catch (err) {
-        console.error("Failed to fetch version history from Supabase:", err.message);
-        return null;
-    }
-}
-
-// Function to repopulate `problemHistory` from Supabase
-async function loadHistoryFromSupabase() {
-	const history = (await fetchVersionHistoryFromSupabase()) ?? [];
-    problemHistory = history;
-    allVersions = showEditHistory(problemHistory); // Reconstruct full versions for display
-	if (problemHistory.length > 0)
-	{
-		lastVersion = getVersion(problemHistory.length - 1);
+	// Function to save a new version or patch to Supabase
+	async function saveVersionToSupabase() {
+		try {
+			const { data, error } = await supabase
+				.from("problems")
+				.update({ diffs: problemHistory })
+				.eq("id", originalProblem.id);
+			if (error) throw error;
+			console.log("Version saved:", data);
+		} catch (err) {
+			console.error("Failed to save version to Supabase:", err.message);
+		}
 	}
-}
 
-// Call `loadHistoryFromSupabase` when the component mounts
-onMount(() => {
-	loadHistoryFromSupabase();
-});
+	// Function to retrieve version history from Supabase
+	async function fetchVersionHistoryFromSupabase() {
+		try {
+			const { data, error } = await supabase
+				.from("problems")
+				.select("diffs")
+				.eq("id", originalProblem.id)
+				.single();
+			if (error) throw error;
+			return data.diffs;
+		} catch (err) {
+			console.error(
+				"Failed to fetch version history from Supabase:",
+				err.message
+			);
+			return null;
+		}
+	}
 
-async function getCurrentUser() {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) {
-        console.error("Failed to get user:", error.message);
-        return "unknown";
-    }
-    return data?.user || "unknown";
-}
+	// Function to repopulate `problemHistory` from Supabase
+	async function loadHistoryFromSupabase() {
+		const history = (await fetchVersionHistoryFromSupabase()) ?? [];
+		problemHistory = history;
+		allVersions = showEditHistory(problemHistory); // Reconstruct full versions for display
+		if (problemHistory.length > 0) {
+			lastVersion = getVersion(problemHistory.length - 1);
+		}
+	}
 
-async function getPacificTime() {
-    const now = new Date();
+	// Call `loadHistoryFromSupabase` when the component mounts
+	onMount(() => {
+		loadHistoryFromSupabase();
+	});
 
-    const options = {
-        timeZone: "America/Los_Angeles",
-        year: "2-digit", // Two-digit year
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true, // Use 12-hour format
-    };
+	async function getCurrentUser() {
+		const { data, error } = await supabase.auth.getUser();
+		if (error) {
+			console.error("Failed to get user:", error.message);
+			return "unknown";
+		}
+		return data?.user || "unknown";
+	}
 
-    const pacificTime = new Intl.DateTimeFormat("en-US", options).format(now);
+	async function getPacificTime() {
+		const now = new Date();
 
-    const [date, time] = pacificTime.split(", ");
-    return `${date} at ${time}`;
-}
+		const options = {
+			timeZone: "America/Los_Angeles",
+			year: "2-digit", // Two-digit year
+			month: "2-digit",
+			day: "2-digit",
+			hour: "2-digit",
+			minute: "2-digit",
+			hour12: true, // Use 12-hour format
+		};
 
-async function addVersion() {
+		const pacificTime = new Intl.DateTimeFormat("en-US", options).format(now);
 
-	const user = await getCurrentUser();
-	const date = await getPacificTime();
+		const [date, time] = pacificTime.split(", ");
+		return `${date} at ${time}`;
+	}
 
-    const newVersion = {
-		problem: fields.problem,
-		comment: fields.comment,
-		answer: fields.answer,
-		solution: fields.solution,
-		kind: "version",
-		author: user.email,
-		timestamp: date
-    };
+	async function addVersion() {
+		const user = await getCurrentUser();
+		const date = await getPacificTime();
 
-	if (problemHistory.length == 0) {
-		problemHistory.push(newVersion);
+		const newVersion = {
+			problem: fields.problem,
+			comment: fields.comment,
+			answer: fields.answer,
+			solution: fields.solution,
+			kind: "version",
+			author: user.email,
+			timestamp: date,
+		};
+
+		// If there're no previous versions or patches, save the current problem as
+		// the first version.
+		if (problemHistory.length == 0) {
+			problemHistory.push(newVersion);
+			await saveVersionToSupabase();
+			lastVersion = structuredClone(newVersion);
+			return;
+		}
+
+		const diffs = {
+			problem: dmp.diff_main(lastVersion.problem, newVersion.problem),
+			comment: dmp.diff_main(lastVersion.comment, newVersion.comment),
+			answer: dmp.diff_main(lastVersion.answer, newVersion.answer),
+			solution: dmp.diff_main(lastVersion.solution, newVersion.solution),
+		};
+
+		dmp.diff_cleanupSemantic(diffs.problem);
+		dmp.diff_cleanupSemantic(diffs.comment);
+		dmp.diff_cleanupSemantic(diffs.answer);
+		dmp.diff_cleanupSemantic(diffs.solution);
+
+		const patch = {
+			problem: dmp.patch_make(lastVersion.problem, diffs.problem),
+			comment: dmp.patch_make(lastVersion.comment, diffs.comment),
+			answer: dmp.patch_make(lastVersion.answer, diffs.answer),
+			solution: dmp.patch_make(lastVersion.solution, diffs.solution),
+			kind: "patch",
+			author: user.email,
+			timestamp: date,
+		};
+
+		problemHistory.push(patch);
 		await saveVersionToSupabase();
+
 		lastVersion = structuredClone(newVersion);
-		return;
 	}
 
-	/* if (problemHistory.length % saveInterval == 0) {
-    	problemHistory.push(newVersion);
+	// Reconstruct a full version from patches
+	function getVersion(versionIndex) {
+		if (versionIndex < 0 || versionIndex >= problemHistory.length) {
+			return {
+				problem: "",
+				comment: "",
+				answer: "",
+				solution: "",
+			};
+		}
+
+		let reconstructed = structuredClone(problemHistory[0]);
+
+		for (let i = 1; i <= versionIndex; i++) {
+			if (problemHistory[i].kind == "version") {
+				reconstructed = structuredClone(problemHistory[i]);
+			} else {
+				const patch = problemHistory[i];
+
+				reconstructed.problem = dmp.patch_apply(
+					patch.problem,
+					reconstructed.problem
+				)[0];
+				reconstructed.comment = dmp.patch_apply(
+					patch.comment,
+					reconstructed.comment
+				)[0];
+				reconstructed.answer = dmp.patch_apply(
+					patch.answer,
+					reconstructed.answer
+				)[0];
+				reconstructed.solution = dmp.patch_apply(
+					patch.solution,
+					reconstructed.solution
+				)[0];
+
+				if (reconstructed.restoredFrom) delete reconstructed.restoredFrom;
+			}
+		}
+
+		return reconstructed;
+	}
+
+	function showEditHistory(problemHistory) {
+		let reconstructed = {
+			problem: "",
+			comment: "",
+			answer: "",
+			solution: "",
+			author: "",
+			timestamp: "",
+		};
+
+		let highlighted = {
+			problem: "",
+			comment: "",
+			answer: "",
+			solution: "",
+			author: "",
+			timestamp: "",
+		};
+
+		let reconstructedVersions = [];
+		let highlightedVersions = [];
+
+		problemHistory.forEach((historyItem) => {
+			// console.log(historyItem);
+			if (historyItem.kind == "version") {
+				reconstructed = structuredClone(historyItem);
+				highlighted = structuredClone(historyItem);
+				//console.log("final", JSON.stringify(historyItem));
+			} else if (historyItem.kind == "patch") {
+				// console.log("final", JSON.stringify(historyItem));
+				const patch = historyItem;
+
+				highlighted.problem = highlightChanges(
+					reconstructed.problem,
+					patch.problem
+				);
+				highlighted.comment = highlightChanges(
+					reconstructed.comment,
+					patch.comment
+				);
+				highlighted.answer = highlightChanges(
+					reconstructed.answer,
+					patch.answer
+				);
+				highlighted.solution = highlightChanges(
+					reconstructed.solution,
+					patch.solution
+				);
+
+				reconstructed.problem = applyPatch(
+					reconstructed.problem,
+					patch.problem
+				);
+				reconstructed.comment = applyPatch(
+					reconstructed.comment,
+					patch.comment
+				);
+				reconstructed.answer = applyPatch(reconstructed.answer, patch.answer);
+				reconstructed.solution = applyPatch(
+					reconstructed.solution,
+					patch.solution
+				);
+
+				highlighted.author = patch.author;
+				highlighted.timestamp = patch.timestamp;
+
+				reconstructed.author = patch.author;
+				reconstructed.timestamp = patch.timestamp;
+
+				if (reconstructed.restoredFrom) delete reconstructed.restoredFrom; // only need for the actual restored version
+				if (highlighted.restoredFrom) delete highlighted.restoredFrom;
+			}
+			highlightedVersions.push(structuredClone(highlighted));
+			reconstructedVersions.push(structuredClone(reconstructed));
+		});
+
+		return highlightedVersions;
+	}
+
+	// Helper function to apply a patch to a string
+	function applyPatch(originalText, diff) {
+		// 'dmp.diff_apply' returns an array where the first element is the updated text
+		const result = dmp.patch_apply(diff, originalText);
+		return result[0];
+	}
+
+	function highlightChanges(originalText, patch) {
+		// console.log(originalText);
+		// Apply the patch to get the updated text
+		const [patchedText] = dmp.patch_apply(patch, originalText);
+
+		// Generate diffs between the original and patched text
+		const diffs = dmp.diff_main(originalText, patchedText);
+		dmp.diff_cleanupSemantic(diffs);
+
+		// Highlight changes
+		return diffs
+			.map(([operation, text]) => {
+				if (operation === 1) {
+					// Insertion
+					return `<span style="color: green; background-color: #e6ffe6;">${text}</span>`;
+				} else if (operation === -1) {
+					// Deletion
+					return `<span style="color: red; background-color: #ffe6e6; text-decoration: line-through;">${text}</span>`;
+				} else {
+					// No change
+					return text;
+				}
+			})
+			.join("");
+	}
+
+	// Function to toggle between expanding and collapsing all
+	function toggleAll(event) {
+		event.preventDefault();
+		allExpanded = !allExpanded;
+		document.querySelectorAll(".version").forEach((detail) => {
+			detail.open = allExpanded;
+		});
+	}
+
+	let lastRestoredVersion = null;
+	async function restoreVersion(event, index) {
+		// Save the current open/close state of all details elements
+		const detailsStates = Array.from(document.querySelectorAll(".version")).map(
+			(details) => details.open
+		);
+
+		event.preventDefault();
+		const user = await getCurrentUser();
+		const date = await getPacificTime();
+
+		if (
+			lastRestoredVersion === index ||
+			(index == problemHistory.length - 1 && problemHistory[index].restoredFrom)
+		) {
+			alert("This version has just been restored.");
+			return;
+		}
+
+		let version = getVersion(index);
+
+		console.log("index", index);
+		console.log("restored", version);
+
+		const restoredVersion = {
+			...version,
+			kind: "version",
+			author: user.email,
+			restoredFrom: `Version ${index + 1}`,
+			timestamp: date,
+		};
+
+		problemHistory.push(restoredVersion);
 		await saveVersionToSupabase();
-		return;
-	} */
+		lastVersion = structuredClone(restoredVersion);
 
-	// let lastVersion = structuredClone(problemHistory[problemHistory.length - 1]);
+		allVersions = [...allVersions, restoredVersion];
 
-	/* if (lastVersion.kind == "patch")
-	{
-		const reconstructedVersion = getVersion(problemHistory.length - 1);
-		// console.log("reconstructed", reconstructedVersion);
-		lastVersion = reconstructedVersion;
-	} */
+		fields = {
+			problem: restoredVersion.problem ?? fields.problem,
+			comment: restoredVersion.comment ?? fields.comment,
+			answer: restoredVersion.answer ?? fields.answer,
+			solution: restoredVersion.solution ?? fields.solution,
+		};
 
-	console.log("last", lastVersion);
-	console.log("new", newVersion);
+		setTimeout(() => {
+			// Restore the open/close state of all other details
+			const detailsElements = document.querySelectorAll(".version");
+			detailsStates.forEach((state, i) => {
+				if (detailsElements[i + 1]) {
+					detailsElements[i + 1].open = state;
+				}
+			});
 
-    const diffs = {
-    	problem: dmp.diff_main(lastVersion.problem, newVersion.problem),
-    	comment: dmp.diff_main(lastVersion.comment, newVersion.comment),
-    	answer: dmp.diff_main(lastVersion.answer, newVersion.answer),
-    	solution: dmp.diff_main(lastVersion.solution, newVersion.solution),
-    };
+			// Open the newly restored version
+			if (detailsElements[0]) {
+				detailsElements[0].open = true;
+			}
+		}, 0);
 
-    dmp.diff_cleanupSemantic(diffs.problem);
-    dmp.diff_cleanupSemantic(diffs.comment);
-    dmp.diff_cleanupSemantic(diffs.answer);
-    dmp.diff_cleanupSemantic(diffs.solution);
-
-    const patch = {
-    	problem: dmp.patch_make(lastVersion.problem, diffs.problem),
-    	comment: dmp.patch_make(lastVersion.comment, diffs.comment),
-    	answer: dmp.patch_make(lastVersion.answer, diffs.answer),
-    	solution: dmp.patch_make(lastVersion.solution, diffs.solution),
-		kind: "patch",
-		author: user.email,
-		timestamp: date
-    };
-
-    problemHistory.push(patch);
-	await saveVersionToSupabase();
-
-	lastVersion = structuredClone(newVersion);
-
-	// console.log("stringify", JSON.stringify(problemHistory));
-
-    // currentVersionIndex = problemHistory.length - 1;
-}
-
-// Reconstruct a full version from patches
-function getVersion(versionIndex) {
-
-    if (versionIndex < 0 || versionIndex >= problemHistory.length) {
-    	return {
-        	problem: "",
-        	comment: "",
-        	answer: "",
-        	solution: ""
-      	};
-    }
-
-	// let startIndex = versionIndex - versionIndex % saveInterval;
-    // let reconstructed = structuredClone(problemHistory[startIndex]);
-
-	let reconstructed = structuredClone(problemHistory[0]);
-
-    for (let i = 1; i <= versionIndex; i++) {
-		if (problemHistory[i].kind == "version")
-		{
-			reconstructed = structuredClone(problemHistory[i]);
-		}
-		else
-		{
-    		const patch = problemHistory[i];
-
-        	reconstructed.problem = dmp.patch_apply(patch.problem, reconstructed.problem)[0];
-        	reconstructed.comment = dmp.patch_apply(patch.comment, reconstructed.comment)[0];
-        	reconstructed.answer = dmp.patch_apply(patch.answer, reconstructed.answer)[0];
-        	reconstructed.solution = dmp.patch_apply(patch.solution, reconstructed.solution)[0];
-
-			if (reconstructed.restoredFrom) delete reconstructed.restoredFrom;
-		}
-      }
-
-    return reconstructed;
-}
-
-function showEditHistory(problemHistory) {
-
-	let reconstructed = {
-		problem: "",
-    	comment: "",
-    	answer: "",
-    	solution: "",
-		author: "",
-		timestamp: ""
-    };
-
-	let highlighted = {
-		problem: "",
-    	comment: "",
-    	answer: "",
-    	solution: "",
-		author: "",
-		timestamp: ""
-    };
-
-	let reconstructedVersions = [];
-	let highlightedVersions = [];
-
-	// console.log("length", problemHistory.length);
-
-    problemHistory.forEach((historyItem) => {
-		// console.log(historyItem);
-    	if (historyItem.kind == "version") {
-      		reconstructed = structuredClone(historyItem);
-			highlighted = structuredClone(historyItem); 
-			//console.log("final", JSON.stringify(historyItem));
-    	} else if (historyItem.kind == "patch") {
-			// console.log("final", JSON.stringify(historyItem));
-      		const patch = historyItem;
-
-			highlighted.problem = highlightChanges(reconstructed.problem, patch.problem);
-            highlighted.comment = highlightChanges(reconstructed.comment, patch.comment);
-            highlighted.answer = highlightChanges(reconstructed.answer, patch.answer);
-            highlighted.solution = highlightChanges(reconstructed.solution, patch.solution);
-
-			reconstructed.problem = applyPatch(reconstructed.problem, patch.problem);
-      		reconstructed.comment = applyPatch(reconstructed.comment, patch.comment);
-      		reconstructed.answer = applyPatch(reconstructed.answer, patch.answer);
-      		reconstructed.solution = applyPatch(reconstructed.solution, patch.solution);
-	
-			highlighted.author = patch.author;
-			highlighted.timestamp = patch.timestamp;
-
-			reconstructed.author = patch.author;
-			reconstructed.timestamp = patch.timestamp;
-
-			if (reconstructed.restoredFrom) delete reconstructed.restoredFrom; // only need for the actual restored version
-			if (highlighted.restoredFrom) delete highlighted.restoredFrom;
-    	}
-		highlightedVersions.push(structuredClone(highlighted));
-		reconstructedVersions.push(structuredClone(reconstructed));
-    });
-
-  return highlightedVersions;
-}
-
-// Helper function to apply a patch to a string
-function applyPatch(originalText, diff) {
-	// 'dmp.diff_apply' returns an array where the first element is the updated text
-	const result = dmp.patch_apply(diff, originalText);
-	return result[0];
-}
-
-function highlightChanges(originalText, patch) {
-	// console.log(originalText);
-    // Apply the patch to get the updated text
-    const [patchedText] = dmp.patch_apply(patch, originalText);
-
-    // Generate diffs between the original and patched text
-    const diffs = dmp.diff_main(originalText, patchedText);
-    dmp.diff_cleanupSemantic(diffs);
-
-    // Highlight changes
-    return diffs
-        .map(([operation, text]) => {
-            if (operation === 1) {
-                // Insertion
-                return `<span style="color: green; background-color: #e6ffe6;">${text}</span>`;
-            } else if (operation === -1) {
-                // Deletion
-                return `<span style="color: red; background-color: #ffe6e6; text-decoration: line-through;">${text}</span>`;
-            } else {
-                // No change
-                return text;
-            }
-        })
-        .join("");
-}
-
-  // Function to toggle between expanding and collapsing all
-  function toggleAll() {
-	event.preventDefault();
-    allExpanded = !allExpanded;
-    document.querySelectorAll(".version").forEach((detail) => {
-      detail.open = allExpanded;
-    });
-  }
-
-  function toggleDetails(index) {
-    const details = document.getElementById(`details-${index}`);
-    const button = document.querySelector(`.dropdown-btn:nth-of-type(${index + 1})`);
-    const arrow = button.querySelector('.arrow');
-
-    if (details.classList.contains("show")) {
-        details.classList.remove("show");
-        setTimeout(() => {
-            details.style.display = "none";
-        }, 300);
-        arrow.innerHTML = "&#8250;";
-        button.classList.remove('active'); // Remove active class
-    } else {
-        details.style.display = "block";
-        setTimeout(() => details.classList.add("show"), 10);
-        arrow.innerHTML = "&#8595;";
-        button.classList.add('active'); // Add active class
-    }
-}
-
-let lastRestoredVersion = null;
-async function restoreVersion(index) {
-	// Save the current open/close state of all details elements
-    const detailsStates = Array.from(document.querySelectorAll(".version")).map((details) => details.open);
-
-	event.preventDefault();
-	const user = await getCurrentUser();
-	const date = await getPacificTime();
-
-     if (lastRestoredVersion === index || (index == problemHistory.length - 1 && problemHistory[index].restoredFrom)) {
-        alert("This version has just been restored.");
-        return;
-    }
-
-	let version = getVersion(index);
-
-	console.log("index", index);
-	console.log("restored", version);
-
-    const restoredVersion = {
-        ...version,
-		kind: "version",
-		author: user.email,
-        restoredFrom: `Version ${index + 1}`,
-        timestamp: date
-    };
-
-	problemHistory.push(restoredVersion);
-	await saveVersionToSupabase();
-	lastVersion = structuredClone(restoredVersion);
-
-	allVersions = [...allVersions, restoredVersion];
-
-    fields = {
-        problem: restoredVersion.problem ?? fields.problem,
-        comment: restoredVersion.comment ?? fields.comment,
-        answer: restoredVersion.answer ?? fields.answer,
-        solution: restoredVersion.solution ?? fields.solution,
-    };
-
-    setTimeout(() => {
-        // Restore the open/close state of all other details
-        const detailsElements = document.querySelectorAll(".version");
-        detailsStates.forEach((state, i) => {
-            if (detailsElements[i + 1]) {
-                detailsElements[i + 1].open = state;
-            }
-        });
-
-        // Open the newly restored version
-        if (detailsElements[0]) {
-            detailsElements[0].open = true;
-        }
-    }, 0);
-
-    lastRestoredVersion = index;
-}
+		lastRestoredVersion = index;
+	}
 
 	function updateFields() {
 		try {
@@ -484,39 +463,12 @@ async function restoreVersion(index) {
 				for (const err of fieldErrors) {
 					if (err.sev === "err") failed = true;
 				}
-
-				// if (fields[field] !== originalProblem[field]) {
-				// 	hasChanges = true;
-				// 	diffFields[field] = recordDiff(originalProblem[field], fields[field]);
-				// } else {
-				// 	diffFields[field] = fields[field];
-				// } *causes error with the latex on the side
 			}
 			if (failed) {
 				isDisabled = true;
 			} else {
-				/* const newVersion = {
-        			problem: fields.problem,
-        			comment: fields.comment,
-        			answer: fields.answer,
-        			solution: fields.solution,
-        			timestamp: new Date().toISOString() // to track when the version was created
-      			}; */
-
-     			// problemHistory.push({ version: newVersion });
-
-				/* addVersion();
-				allVersions = showEditHistory(problemHistory); */
-
 				for (const field of fieldList) {
 					latexes[field + "_latex"] = fields[field];
-
-					// addVersion(fields.problem);	
-
-					/* if (field == "problem")
-					{
-						addVersion(fields.problem);		
-					} */
 				}
 				// force reactivity
 				latexes = latexes;
@@ -555,7 +507,7 @@ async function restoreVersion(index) {
 
 	async function submitPayload(isDraft = false) {
 		try {
-			isDisabled = true
+			isDisabled = true;
 			if (
 				fields.problem &&
 				fields.comment &&
@@ -568,10 +520,14 @@ async function restoreVersion(index) {
 				} else if (problemFiles.some((f) => f.size > fileSizeLimit)) {
 					throw new Error("File too large");
 				} else {
-					console.log("OGSTATUS", originalProblem?.status)
-					console.log(isDraft)
-					const status = (isDraft ? "Draft" : (originalProblem?.status == "Draft" || !originalProblem?.status ? "Idea" : originalProblem?.status))
-					console.log("STATUS", status)
+					console.log("OGSTATUS", originalProblem?.status);
+					console.log(isDraft);
+					const status = isDraft
+						? "Draft"
+						: originalProblem?.status == "Draft" || !originalProblem?.status
+						? "Idea"
+						: originalProblem?.status;
+					console.log("STATUS", status);
 					const payload = {
 						problem_latex: fields.problem,
 						comment_latex: fields.comment,
@@ -585,24 +541,26 @@ async function restoreVersion(index) {
 						status: status,
 					};
 
-					const detailsStates = Array.from(document.querySelectorAll(".version")).map((details) => details.open);
-					
+					const detailsStates = Array.from(
+						document.querySelectorAll(".version")
+					).map((details) => details.open);
+
 					await addVersion();
 					allVersions = showEditHistory(problemHistory); // !!! Can definitely make more efficient (all the past versions are already displayed)
 					setTimeout(() => {
-       					 // Restore the open/close state of all other details
-        				const detailsElements = document.querySelectorAll(".version");
-        				detailsStates.forEach((state, i) => {
-            			if (detailsElements[i + 1]) {
-                			detailsElements[i + 1].open = state;
-            			}
-       				 });
+						// Restore the open/close state of all other details
+						const detailsElements = document.querySelectorAll(".version");
+						detailsStates.forEach((state, i) => {
+							if (detailsElements[i + 1]) {
+								detailsElements[i + 1].open = state;
+							}
+						});
 
-        			// Open the newly restored version
-       				if (detailsElements[0]) {
-            			detailsElements[0].open = true;
-        			}
-    }, 0);
+						// Open the newly restored version
+						if (detailsElements[0]) {
+							detailsElements[0].open = true;
+						}
+					}, 0);
 
 					submittedText = "Submitting problem...";
 					await onSubmit(payload);
@@ -617,7 +575,6 @@ async function restoreVersion(index) {
 		}
 	}
 	import { onMount } from "svelte";
-
 </script>
 
 <svelte:window on:click={updateActive} />
@@ -692,7 +649,10 @@ async function restoreVersion(index) {
 						labelText="Answer"
 						bind:value={fields.answer}
 						bind:ref={fieldrefs.answer}
-						on:input={() => {updateFields(); onDirty();}}
+						on:input={() => {
+							updateFields();
+							onDirty();
+						}}
 						required={true}
 					/>
 					<div style="position: absolute; top: 5px; right: 5px;">
@@ -726,7 +686,10 @@ async function restoreVersion(index) {
 						labelText="Solution"
 						bind:value={fields.solution}
 						bind:ref={fieldrefs.solution}
-						on:input={() => {updateFields(); onDirty();}}
+						on:input={() => {
+							updateFields();
+							onDirty();
+						}}
 						required={true}
 					/>
 					<div style="position: absolute; top: 5px; right: 5px;">
@@ -760,7 +723,10 @@ async function restoreVersion(index) {
 						labelText="Comments"
 						bind:value={fields.comment}
 						bind:ref={fieldrefs.comment}
-						on:input={() => {updateFields(); onDirty();}}
+						on:input={() => {
+							updateFields();
+							onDirty();
+						}}
 						required={true}
 					/>
 					<div style="position: absolute; top: 5px; right: 5px;">
@@ -793,39 +759,48 @@ async function restoreVersion(index) {
 					<h3>Edit History:</h3>
 
 					{#if allVersions && allVersions.length > 0}
-					<!-- Expand/Collapse Toggle Button -->
-					<div style="margin-bottom: 10px;">
-					  <button on:click={toggleAll}>
-						{allExpanded ? "Collapse All" : "Expand All"}
-					  </button>
-					</div>
+						<!-- Expand/Collapse Toggle Button -->
+						<div style="margin-bottom: 10px;">
+							<button on:click={toggleAll}>
+								{allExpanded ? "Collapse All" : "Expand All"}
+							</button>
+						</div>
 					{/if}
 
 					{#if allVersions && allVersions.length > 0}
 						{#each allVersions.slice().reverse() as version, index}
-						<details class="version {version.restoredFrom ? 'restored-version' : ''}">
-							<summary>
-								<h4>
-									{version.timestamp}, {version.author} (Version {allVersions.length - index})
-									{#if version.restoredFrom}
-										<span class="restored-label">[Restored from {version.restoredFrom}]</span>
-									{/if}
-								</h4>
-								<span class="arrow">&#8250;</span>
-							</summary>
-							<div class="details-content">
-								<p><strong>Problem:</strong> {@html version.problem}</p>
-								<p><strong>Answer:</strong> {@html version.answer}</p>
-								<p><strong>Solution:</strong> {@html version.solution}</p>
-								<p><strong>Comments:</strong> {@html version.comment}</p>
-								<button on:click={() => restoreVersion(allVersions.length - index - 1)}>Restore Version</button>
-							</div>
-						</details>
+							<details
+								class="version {version.restoredFrom ? 'restored-version' : ''}"
+							>
+								<summary>
+									<h4>
+										{version.timestamp}, {version.author} (Version {allVersions.length -
+											index})
+										{#if version.restoredFrom}
+											<span class="restored-label"
+												>[Restored from {version.restoredFrom}]</span
+											>
+										{/if}
+									</h4>
+									<span class="arrow">&#8250;</span>
+								</summary>
+								<div class="details-content">
+									<p><strong>Problem:</strong> {@html version.problem}</p>
+									<p><strong>Answer:</strong> {@html version.answer}</p>
+									<p><strong>Solution:</strong> {@html version.solution}</p>
+									<p><strong>Comments:</strong> {@html version.comment}</p>
+									<button
+										on:click={(event) =>
+											restoreVersion(event, allVersions.length - index - 1)}
+										>Restore Version</button
+									>
+								</div>
+							</details>
 						{/each}
 					{:else}
-  						<p>No versions available</p>
+						<p>No versions available</p>
 					{/if}
-				  </div>
+				</div>
 			</Form>
 		</div>
 
@@ -839,11 +814,13 @@ async function restoreVersion(index) {
 					type="submit"
 					size="small"
 					disabled={isDisabled || problemFailed}
-					on:click={() => {submitPayload()}}
+					on:click={() => {
+						submitPayload();
+					}}
 					style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0;"
 				>
 					<p>Submit Problem</p>
-				</Button><br><br>
+				</Button><br /><br />
 				{#if !originalProblem || originalProblem?.status == "Draft"}
 					<Button
 						kind="tertiary"
@@ -851,7 +828,9 @@ async function restoreVersion(index) {
 						type="submit"
 						size="small"
 						disabled={isDisabled || problemFailed}
-						on:click={() => {submitPayload(true)}}	
+						on:click={() => {
+							submitPayload(true);
+						}}
 						style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0;"
 					>
 						<p>Save Draft</p>
@@ -948,62 +927,61 @@ async function restoreVersion(index) {
 		padding: 0;
 	}
 	.editHistory {
-    padding: 20px;
-    background-color: #f9f9f9;
-    border-radius: 8px;
-  }
+		padding: 20px;
+		background-color: #f9f9f9;
+		border-radius: 8px;
+	}
 
-  .version {
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-    padding: 10px;
-    background-color: #fff;
-    border-radius: 5px;
-  }
+	.version {
+		margin-bottom: 20px;
+		border: 1px solid #ccc;
+		padding: 10px;
+		background-color: #fff;
+		border-radius: 5px;
+	}
 
-  h4 {
-    margin: 0;
-    font-size: 1.2rem;
-  }
+	h4 {
+		margin: 0;
+		font-size: 1.2rem;
+	}
 
-  p {
-    margin: 5px 0;
-  }
+	p {
+		margin: 5px 0;
+	}
 
-summary {
-    display: flex;
-    justify-content: space-between; /* Pushes the arrow to the right */
-    align-items: center; /* Vertically center the text and arrow */
-    cursor: pointer;
-}
+	summary {
+		display: flex;
+		justify-content: space-between; /* Pushes the arrow to the right */
+		align-items: center; /* Vertically center the text and arrow */
+		cursor: pointer;
+	}
 
-details[open] summary .arrow {
-    transform: rotate(90deg); /* Rotate the arrow 90 degrees */
-}
+	details[open] summary .arrow {
+		transform: rotate(90deg); /* Rotate the arrow 90 degrees */
+	}
 
-.arrow {
-    font-size: 20px; 
-    margin-left: 10px; 
-}
+	.arrow {
+		font-size: 20px;
+		margin-left: 10px;
+	}
 
-.details-content {
-    padding-left: 20px;
-    transition: max-height 0.3s ease;
-    overflow: hidden;
-}
+	.details-content {
+		padding-left: 20px;
+		transition: max-height 0.3s ease;
+		overflow: hidden;
+	}
 
-.restored-version .details-content {
-    background-color: #f0f0f0; /* Light gray background */
-    border: 1px solid #ddd; /* Optional: subtle border */
-    padding: 10px;
-    border-radius: 4px; /* Rounded corners for a softer look */
-}
+	.restored-version .details-content {
+		background-color: #f0f0f0; /* Light gray background */
+		border: 1px solid #ddd; /* Optional: subtle border */
+		padding: 10px;
+		border-radius: 4px; /* Rounded corners for a softer look */
+	}
 
-.restored-label {
-    font-size: 0.9em;
-    color: #007bff;
-    margin-left: 10px;
-    font-style: italic;
-}
-
+	.restored-label {
+		font-size: 0.9em;
+		color: #007bff;
+		margin-left: 10px;
+		font-style: italic;
+	}
 </style>
