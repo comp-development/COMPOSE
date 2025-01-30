@@ -14,7 +14,7 @@
 	import Problem from "$lib/components/Problem.svelte";
 	import LatexKeyboard from "$lib/components/editor/LatexKeyboard.svelte";
 	import ImageManager from "$lib/components/images/ImageManager.svelte";
-	import { user } from "$lib/sessionStore.js";
+	import { user } from "$lib/sessionStore";
 	import { handleError } from "$lib/handleError.ts";
 	import { getGlobalTopics } from "$lib/supabase";
 	import { supabase } from "$lib/supabaseClient";
