@@ -582,7 +582,7 @@ export async function updateProblemEmbedding(problem: any) {
     const response = await fetch('https://api.openai.com/v1/embeddings', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer `,
+            'Authorization': `Bearer ${openaiKey}`,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -697,7 +697,7 @@ export async function semanticSearch(query: string, limit: number = 10) {
 	const response = await fetch('https://api.openai.com/v1/embeddings', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer`,
+            'Authorization': `Bearer ${openaiKey}`,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
