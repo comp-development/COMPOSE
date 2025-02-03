@@ -502,23 +502,6 @@
 
 <svelte:window bind:outerWidth={width} />
 
-<div class="container">
-	<div class="search-container">
-		<Search
-			placeholder="Search problems semantically (e.g., 'Hard geometry problems involving circles')"
-			bind:value={searchQuery}
-			on:clear={() => {
-				searchQuery = "";
-				resetProblems();
-			}}
-		/>
-		<Button
-			title={isSemanticSearching ? "Searching..." : "Search"}
-			action={isSemanticSearching ? null : performSemanticSearch}
-		/>
-	</div>
-</div>
-
 	<br />
 	<h1>Problem Inventory</h1>
 	{#if !loaded}
@@ -604,7 +587,7 @@
 	-->
 	<br /><br />
 	<div style="width:80%; margin: auto;margin-bottom: 20px;">
-		<ProblemList {problems} />
+		<ProblemList {problems} {performSemanticSearch} />
 	</div>
 
 	{#if openModal}

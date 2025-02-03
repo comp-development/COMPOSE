@@ -22,6 +22,8 @@
 	import { LogarithmicScale } from "chart.js";
 
 	export let problems = [];
+	export let performSemanticSearch;
+	export let useSemanticSearch = false;
 	export let selectable = false;
 	export let stickyHeader = false;
 	export let selectedItems = [];
@@ -242,7 +244,28 @@
 			toast.error(error.message);
 		}
 	}
+
+	let searchQuery = "";
+	let isSemanticSearching = false;
+	let displayedProblems = problems; // Display filtered problems
+
+	// Trigger search on enter
+	function handleSearchEnter(event) {
+		if (event.key === 'Enter') {
+			event.preventDefault(); // Prevent form submission
+			if (useSemanticSearch && performSemanticSearch) {
+				performSemanticSearch(searchQuery); // Call semantic search passed as a prop
+			} 
+		}
+	}
+
 </script>
+
+<select bind:value={useSemanticSearch}>
+    <option value={false}>Toolbar Search</option>
+    <option value={true}>Semantic Search</option>
+</select>
+
 
 <svelte:window />
 <div bind:clientWidth={width} class="align-items: right; display: flex;">
@@ -298,7 +321,6 @@
 </div>
 
 
-
 <div
 	class="flex-dir-col"
 	on:dragover={(e) => e.preventDefault()}
@@ -325,7 +347,23 @@
 	>
 		<Toolbar size="sm">
 			<ToolbarContent>
-				<ToolbarSearch persistent shouldFilterRows />
+				{#if useSemanticSearch}
+					<!-- <input
+						type="text"
+						bind:value={searchQuery}
+						placeholder="Enter search query..."
+						on:keydown={handleSearchEnter}
+					/> -->
+					<ToolbarSearch
+    					persistent
+    					bind:value={searchQuery}
+    					on:keydown={handleSearchEnter} 
+    					placeholder="Enter search query..."
+					/>
+				{:else}
+    <!-- Default ToolbarSearch -->
+					<ToolbarSearch persistent shouldFilterRows />
+				{/if}
 			</ToolbarContent>
 		</Toolbar>
 		<svelte:fragment slot="cell-header" let:header>
