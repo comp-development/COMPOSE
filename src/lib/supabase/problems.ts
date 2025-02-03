@@ -6,6 +6,7 @@ import {
 	uploadImage,
 	defaultSettings,
 } from "$lib/supabase";
+import { get } from "svelte/store";
 
 let scheme = defaultSettings;
 
@@ -47,6 +48,7 @@ export interface ProblemEditRequest {
 	sub_topics?: string;
 	image_name?: string;
 	discord_id?: string;
+	embedding?: number[];
 }
 
 /**
@@ -325,6 +327,44 @@ export async function bulkProblems(problems: ProblemRequest[]) {
 	return data;
 }
 
+
+export function convertEditToProblemWithEmbedding(problem:ProblemEditRequest, problemWithEmbedding) {
+	if(problem?.answer_latex) {
+		problemWithEmbedding.answer_latex = problem.answer_latex;
+	}
+	if(problem?.comment_latex) {
+		problemWithEmbedding.comment_latex = problem.comment_latex;
+	}
+	if(problem?.solution_latex) {
+		problemWithEmbedding.solution_latex = problem.solution_latex;
+	}
+
+	if(problem?.author_id) {
+		problemWithEmbedding.author_id = problem.author_id;
+	}
+
+	if(problem?.difficulty) {
+		problemWithEmbedding.difficulty = problem.difficulty;
+	}
+
+	if(problem?.nickname) {
+		problemWithEmbedding.nickname = problem.nickname;
+	}
+	if(problem?.sub_topics) {
+		problemWithEmbedding.sub_topics = problem.sub_topics;
+	}
+	if(problem?.image_name) {
+		problemWithEmbedding.image_name = problem.image_name;
+	}
+	if(problem?.discord_id) {
+		problemWithEmbedding.discord_id = problem.discord_id;
+	}
+
+	return problemWithEmbedding;
+
+}
+
+
 /**
  * Edits a specific problem from the database
  *
@@ -336,11 +376,20 @@ export async function editProblem(
 	problem: ProblemEditRequest,
 	problem_id: number,
 ) {
+
+
+	const problemWithEmbedding = await getProblem(problem_id);
+	console.log(problemWithEmbedding?.embedding);
+	const updatedProblem = convertEditToProblemWithEmbedding(problem, problemWithEmbedding);
+	problem.embedding = await getProblemEmbedding(updatedProblem);
+
+
 	const { data, error } = await supabase
 		.from("problems")
 		.update(problem)
 		.eq("id", problem_id)
 		.select();
+
 	if (error) throw error;
 	console.log(data);
 	const authorName = await getAuthorName(data[0].author_id);
