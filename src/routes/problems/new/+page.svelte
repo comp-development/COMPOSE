@@ -31,51 +31,45 @@
 	async function submitProblem(payload) {
 		authorName = await getAuthorName((await getThisUser()).id);
 		
-
 		console.log(payload);
-		try {
-			if (authorName === "") {
-				throw new Error("Author name is not defined");
-			}
-			if (payload.topics.length == 0) {
-				throw new Error("Must specify at least one topic for this problem");
-			} else {
-				const embedding = await getProblemEmbedding(payload);
-
-				// console.log("stuff", await getProblemEmbedding(payload));
-				// console.log("add embedding", embedding);
-				payload.embedding = embedding;
-				console.log("add embedding", payload);
-				const data = await createProblem(payload);
-
-				let imageDownloadResult = await ImageBucket.downloadLatexImages(
-					payload.problem_latex
-				);
-				let imageName = "";
-				if (imageDownloadResult.images.length > 0) {
-					imageName = await ImageBucket.getImageURL(
-						imageDownloadResult.images[0].name
-					);
-				} else {
-					imageDownloadResult = await ImageBucket.downloadLatexImages(
-						payload.solution_latex
-					);
-					if (imageDownloadResult.images.length > 0) {
-						imageName = await ImageBucket.getImageURL(
-							imageDownloadResult.images[0].name
-						);
-					}
-				}
-
-				openModal = true;
-				problem_id = data.id;
-				//window.location.replace(`/problems/${problemId}`);
-			}
-			dirty = false;
-		} catch (error) {
-			handleError(error);
-			toast.error(error.message);
+		if (authorName === "") {
+			throw new Error("Author name is not defined");
 		}
+		if (payload.topics.length == 0) {
+			throw new Error("Must specify at least one topic for this problem");
+		} else {
+			const embedding = await getProblemEmbedding(payload);
+
+			// console.log("stuff", await getProblemEmbedding(payload));
+			// console.log("add embedding", embedding);
+			payload.embedding = embedding;
+			console.log("add embedding", payload);
+			const data = await createProblem(payload);
+
+		let imageDownloadResult = await ImageBucket.downloadLatexImages(
+			payload.problem_latex
+		);
+		let imageName = "";
+		if (imageDownloadResult.images.length > 0) {
+			imageName = await ImageBucket.getImageURL(
+				imageDownloadResult.images[0].name
+			);
+		} else {
+			imageDownloadResult = await ImageBucket.downloadLatexImages(
+				payload.solution_latex
+			);
+			if (imageDownloadResult.images.length > 0) {
+				imageName = await ImageBucket.getImageURL(
+					imageDownloadResult.images[0].name
+				);
+			}
+		}
+
+		openModal = true;
+		problem_id = data.id;
+		//window.location.replace(`/problems/${problemId}`);
+	}
+	dirty = false;
 	}
 </script>
 

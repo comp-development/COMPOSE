@@ -11,6 +11,8 @@
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^1.0.0",
 		"@sveltejs/kit": "^1.20.4",
+		"@types/diff": "^6.0.0",
+		"@types/diff-match-patch": "^1.0.36",
 		"carbon-icons-svelte": "^11.4.0",
 		"carbon-preprocess-svelte": "^0.9.1",
 		"prettier": "^2.7.1",
@@ -36,6 +38,8 @@
 		"chart.js": "^3.9.1",
 		"chartjs-plugin-annotation": "^1.4.0",
 		"cookie-parser": "^1.4.6",
+		"diff": "^7.0.0",
+		"diff-match-patch": "^1.0.5",
 		"discord-interactions": "^3.4.0",
 		"discord.js": "^14.7.1",
 		"dotenv": "^16.4.5",

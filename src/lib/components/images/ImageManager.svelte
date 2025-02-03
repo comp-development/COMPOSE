@@ -265,6 +265,11 @@
 
 	.listing-container {
 		margin-top: 5px;
+		overflow-y: scroll;
+		resize: vertical;
+		height: 20vh;
+		padding: 5px;
+		border: thin solid #00000030;
 	}
 
 	.listing-item {
