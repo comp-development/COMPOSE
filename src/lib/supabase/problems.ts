@@ -7,6 +7,8 @@ import {
 	defaultSettings,
 } from "$lib/supabase";
 import { get } from "svelte/store";
+// import { VITE_OPENAI_API_KEY } from "$env/static/private";
+import { openaiKey } from "$lib/openaiClient";
 
 let scheme = defaultSettings;
 
@@ -601,6 +603,11 @@ export async function updateProblemEmbedding(problem: any) {
     if (error) throw error;
 }
 
+
+/* 
+* Given a Problem, return its embedding
+* TODO: Make a type called problemEmbeddingRequest
+*/
 export async function getProblemEmbedding(problem: any) {
 
     const combined_text = [
@@ -623,7 +630,7 @@ export async function getProblemEmbedding(problem: any) {
     const response = await fetch('https://api.openai.com/v1/embeddings', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer `,
+            'Authorization': `Bearer ${openaiKey}`,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -643,6 +650,7 @@ export async function getProblemEmbedding(problem: any) {
 
 /**
  * Updates embeddings for all problems in the database
+ * Used initially to populate all embeddings for the first time
  */
 export async function updateAllProblemEmbeddings() {
 

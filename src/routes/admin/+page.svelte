@@ -3,37 +3,40 @@
 	import Button from "$lib/components/Button.svelte";
     import toast from "svelte-french-toast";
     import { handleError } from "$lib/handleError";
-    import { updateAllProblemEmbeddings } from '$lib/supabase/problems';
+    // import { updateAllProblemEmbeddings } from '$lib/supabase/problems';
     import { json } from '@sveltejs/kit';
 
 
-    let isUpdatingEmbeddings = false;
+    // this is an admin button that will generate new embeddings for all problems
+    // Needed this initially when initially populatin all embeddings
+    // commented out now, but leaving it in just in case mass embedding update is needed.
+    // let isUpdatingEmbeddings = false;
 
-    async function updateEmbeddings() {
-        try {
-            console.log("Updating embeddings... button clicked");
-            isUpdatingEmbeddings = true;
+    // async function updateEmbeddings() {
+    //     try {
+    //         console.log("Updating embeddings... button clicked");
+    //         isUpdatingEmbeddings = true;
             
-            const response = json(await updateAllProblemEmbeddings());
+    //         const response = json(await updateAllProblemEmbeddings());
 
-            // const response = await fetch('/api/admin/update-embeddings', {
-            //     method: 'POST'
-            // });
+    //         // const response = await fetch('/api/admin/update-embeddings', {
+    //         //     method: 'POST'
+    //         // });
             
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to update embeddings');
-            }
+    //         if (!response.ok) {
+    //             const error = await response.json();
+    //             throw new Error(error.error || 'Failed to update embeddings');
+    //         }
             
-            const result = await response.json();
-            toast.success(`Successfully updated embeddings for ${result.count} problems`);
-        } catch (error) {
-            handleError(error);
-            toast.error('Failed to update embeddings: ' + error.message);
-        } finally {
-            isUpdatingEmbeddings = false;
-        }
-    }
+    //         const result = await response.json();
+    //         toast.success(`Successfully updated embeddings for ${result.count} problems`);
+    //     } catch (error) {
+    //         handleError(error);
+    //         toast.error('Failed to update embeddings: ' + error.message);
+    //     } finally {
+    //         isUpdatingEmbeddings = false;
+    //     }
+    // }
 </script>
 
 <br />
@@ -55,7 +58,7 @@
 <br />
 <br />
 
-<div class="admin-section">
+<!-- <div class="admin-section">
     <h2>Problem Management</h2>
     <div class="button-group">
         <Button 
@@ -63,12 +66,12 @@
             action={isUpdatingEmbeddings ? null : updateEmbeddings}
         />
     </div>
-</div>
+</div> -->
 
 <style>
-    .admin-section {
+    /* .admin-section {
         margin: 2rem 0;
-    }
+    } */
     .button-group {
         display: flex;
         gap: 1rem;
