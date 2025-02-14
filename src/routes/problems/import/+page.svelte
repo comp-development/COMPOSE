@@ -54,14 +54,17 @@
 	async function checkFiles() {
 		try {
 			for (const file of files) {
-				const extension = file.name.split(".").pop();
-				if (extension !== "tex") {
-					errorMessages.push(
-						`Skipped file ${file.name} because it is not a .tex file`
-					);
-				} else {
+				const extension = file.name.split(".").pop().toLowerCase();
+				if (extension === "tex") {
 					const text = await file.text();
 					importProblem(text, file.name);
+				} else if (extension === "csv") {
+					const text = await file.text();
+					importCSV(text, file.name);
+				} else {
+					errorMessages.push(
+						`Skipped file ${file.name} because it is not a .tex or .csv file`
+					);
 				}
 			}
 
@@ -125,6 +128,83 @@
 		}
 	}
 
+	function importCSV(text, name) {
+		try {
+			const rows = parseCSV(text);
+			if (!rows || rows.length < 2) {
+				errorMessages.push(`CSV file ${name} is empty or not properly formatted.`);
+				return;
+			}
+			const headers = rows[0].map((header) => header.trim().toLowerCase());
+			const requiredHeaders = ["problem", "answer", "solution", "topic_ids", "comment"];
+			for (const field of requiredHeaders) {
+				if (!headers.includes(field)) {
+					throw new Error(`CSV file ${name} is missing expected column: ${field}`);
+				}
+			}
+			for (let i = 1; i < rows.length; i++) {
+				const row = rows[i];
+				if (row.length === 0 || row.every((cell) => cell.trim() === "")) continue;
+				let rowObj = {};
+				headers.forEach((header, index) => {
+					rowObj[header] = row[index] ? row[index].trim() : "";
+				});
+				const payload = {
+					problem_latex: rowObj.problem,
+					answer_latex: rowObj.answer,
+					solution_latex: rowObj.solution,
+					comment_latex: rowObj.comment,
+					topics: rowObj.topic_ids ? rowObj.topic_ids.split(",").map((t) => t.trim()) : [""],
+					sub_topics: "",
+					edited_at: new Date().toISOString(),
+					author_id: userSelectRef && userSelectRef != "" ? userSelectRef : user.id,
+				};
+				payloads = [...payloads, payload];
+			}
+			return true;
+		} catch (error) {
+			handleError(error);
+			toast.error(error.message);
+		}
+	}
+
+	function parseCSV(csvText) {
+		const rows = [];
+		let currentRow = [];
+		let currentValue = "";
+		let insideQuotes = false;
+
+		for (let i = 0; i < csvText.length; i++) {
+			const char = csvText[i];
+			if (char === '"') {
+				if (insideQuotes && csvText[i + 1] === '"') {
+					currentValue += '"';
+					i++;
+				} else {
+					insideQuotes = !insideQuotes;
+				}
+			} else if (char === "," && !insideQuotes) {
+				currentRow.push(currentValue);
+				currentValue = "";
+			} else if ((char === "\n" || char === "\r") && !insideQuotes) {
+				if (char === "\r" && csvText[i + 1] === "\n") {
+					i++;
+				}
+				currentRow.push(currentValue);
+				rows.push(currentRow);
+				currentRow = [];
+				currentValue = "";
+			} else {
+				currentValue += char;
+			}
+		}
+		if (currentValue || currentRow.length) {
+			currentRow.push(currentValue);
+			rows.push(currentRow);
+		}
+		return rows;
+	}
+
 	async function submitProblems() {
 		try {
 			success = false;
@@ -142,7 +222,6 @@
 
 			for (const payload of payloads) {
 				const topics = payload.topics;
-				// find it in the list
 				const foundProblem = data.find((pb) =>
 					[
 						"problem_latex",
@@ -150,7 +229,7 @@
 						"answer_latex",
 						"solution_latex",
 					].every((field) => pb[field] === payload[field])
-				); // don't worry about it
+				);
 
 				if (!foundProblem) {
 					console.log("error: problem submitted but not found");
@@ -196,9 +275,9 @@
 <form on:submit|preventDefault style="padding: 20px;">
 	<div>
 		<label for="file-upload" class="custom-file-upload">
-			&#8593 Upload .tex files for the problems
+			&#8593 Upload .tex or .csv files for the problems
 		</label>
-		<input bind:files multiple type="file" id="file-upload" accept=".tex" />
+		<input bind:files multiple type="file" id="file-upload" accept=".tex,.csv" />
 	</div>
 
 	<p style="margin-top: 20px;">Or manually add:</p>
