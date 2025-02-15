@@ -38,10 +38,9 @@
 	export let showList = [
 		"full_name",
 		"topics_short",
-		"average_difficulty",
-		"average_quality",
 		"status",
-		"feedback_status",
+		"endorsed",
+		"unresolved_count",
 		"problem_tests",
 		"created_at"
 	];
@@ -78,7 +77,7 @@
 			value: "Topics",
 			short: "Topics",
 			icon: "ri-pie-chart-2-fill",
-			width: "15%"
+			width: "12%"
 		},
 		{
 			key: "sub_topics",
@@ -103,8 +102,13 @@
 		},
 		{
 			key: "unresolved_count",
+			value: "Unresolved",
+			icon: "ri-flag-fill",
+			width: "10%"
+		},
+		{
+			key: "feedback_count",
 			value: "Feedback",
-			short: "Fdbk",
 			icon: "ri-flag-fill",
 			width: "10%"
 		},
@@ -120,15 +124,11 @@
 			}
 		},
 		{
-			key: "feedback_status",
-			value: "Status",
-			short: "Status",
+			key: "endorsed",
+			value: "Endorsed",
+			short: "Endorsed",
 			icon: "ri-feedback-fill",
-			width: "10%",
-			sort: (a, b) => {
-				const order = ['Needs Review', 'Awaiting Feedback', 'Awaiting Endorsement', 'Awaiting Testsolve', 'Testsolve Received', 'Complete'];
-				return order.indexOf(a) - order.indexOf(b);
-			}
+			width: "10%"
 		},
 		{
 			key: "problem_tests",
@@ -277,8 +277,16 @@
 				text: "Stage",
 			},
 			{
-				id: "feedback_status",
-				text: "Status",
+				id: "endorsed",
+				text: "Endorsed",
+			},
+			{
+				id: "unresolved_count",
+				text: "Unresolved",
+			},
+			{
+				id: "feedback_count",
+				text: "Feedback",
 			},
 			{
 				id: "problem_tests",
@@ -394,6 +402,10 @@
 					<div style="overflow: hidden;">
 						{cell.value ?? 0}
 					</div>
+				{:else if cell.key === "feedback_count"}
+					<div style="overflow: hidden;">
+						{cell.value ?? 0}
+					</div>
 				{:else if cell.key === "average_difficulty" || cell.key === "average_quality"}
 					<div
 						style="overflow: hidden; display: flex; align-items: flex-start;"
@@ -424,24 +436,14 @@
 							<Tag type="high-contrast">Archived</Tag>
 						{/if}
 					</div>
-				{:else if cell.key === "feedback_status"}
+				{:else if cell.key === "endorsed"}
 					<div
 						style="overflow: hidden; display: flex; align-items: flex-start;"
 					>
-						{#if cell.value == "Needs Review"}
-							<Tag type="magenta">Needs Review</Tag>
-						{:else if cell.value == "Awaiting Feedback"}
-							<Tag type="blue">Awaiting Feedback</Tag>
-						{:else if cell.value == "Awaiting Endorsement"}
-							<Tag type="teal">Awaiting Endorsement</Tag>
-						{:else if cell.value == "Awaiting Testsolve"}
-							<Tag type="cyan">Awaiting Testsolve</Tag>
-						{:else if cell.value == "Testsolve Received"}
-							<Tag type="green">Testsolve Received</Tag>
-						{:else if cell.value == "Complete"}
-							<Tag type="green">Complete</Tag>
-						{:else if cell.value == "Archived"}
-							<Tag type="high-contrast">Archived</Tag>
+						{#if cell.value}
+							<Tag type="green">Yes</Tag>
+						{:else}
+							<Tag type="red">No</Tag>
 						{/if}
 					</div>
 				{:else if cell.key === "problem_tests"}
