@@ -280,6 +280,7 @@
 					]}
 					customHeaders={[
 						{ key: "problem_number", value: "", icon: "ri-hashtag" },
+						{ key: "endorse_link", value: "Endorse" },
 					]}
 				/>
 			</div>

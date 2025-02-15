@@ -16,7 +16,7 @@
 	import { sortIDs } from "$lib/sortIDs";
 	import Switcher from "carbon-icons-svelte/lib/Switcher.svelte";
 	import { createEventDispatcher } from "svelte";
-	import { Filter } from "carbon-icons-svelte";
+	import { Filter, Trophy } from "carbon-icons-svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError.ts";
 	import { LogarithmicScale } from "chart.js";
@@ -129,7 +129,14 @@
 			short: "Endorsed",
 			icon: "ri-feedback-fill",
 			width: "10%",
-			sort: (a, b) => a - b,
+			sort: (a, b) => (a == null ? 1 : 0) - (b == null ? 1 : 0),
+		},
+		{
+			key: "endorse_link",
+			value: "Endorse",
+			short: "Endorse",
+			icon: "ri-feedback-fill",
+			width: "10%",
 		},
 		{
 			key: "problem_tests",
@@ -442,10 +449,16 @@
 						style="overflow: hidden; display: flex; align-items: flex-start;"
 					>
 						{#if cell.value}
-							<Tag type="green">Yes</Tag>
+							<Tag type="green">{cell.value}</Tag>
 						{:else}
-							<Tag type="red">No</Tag>
+							<Tag type="red">{"none"}</Tag>
 						{/if}
+					</div>
+				{:else if cell.key === "endorse_link"}
+					<div class="pencil">
+						<Link class="link" href={`/problems/endorse?problem_id=${row.id}`}>
+							<Trophy/>
+						</Link>
 					</div>
 				{:else if cell.key === "problem_tests"}
 					<div

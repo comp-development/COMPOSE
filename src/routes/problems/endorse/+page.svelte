@@ -84,7 +84,11 @@
 			if (!user_id) {
 				user_id = (await getThisUser()).id;
 			}
-            problems = await getRandomProblems(user_id, true);
+	    let problem_id = new URLSearchParams(window.location.search).get('problem_id');
+	    if (problem_id) {
+	    	problems = [await getProblem(Number(problem_id))];
+	    }
+            problems = problems.concat(await getRandomProblems(user_id, true));
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
