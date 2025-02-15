@@ -273,7 +273,7 @@
 						"topics_short",
 						"sub_topics",
 						"problem_tests",
-						"feedback_status",
+						// "feedback_status",
 						// "average_difficulty",
 						// "average_quality",
 						"unresolved_count",

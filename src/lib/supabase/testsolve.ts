@@ -659,10 +659,7 @@ export async function getRandomProblems(activeUserId, endorsing = false) {
 			.eq("archived", false);
 
 		if (endorsing) {
-			query = query.in("feedback_status", [
-				"Awaiting Endorsement",
-				"Awaiting Testsolve",
-			]);
+			query = query.gte("feedback_count", 2);
 		} else {
 			let { data: feedback, error } = await supabase
 				.from("problem_feedback")
@@ -685,19 +682,8 @@ export async function getRandomProblems(activeUserId, endorsing = false) {
 		if (error2) throw error2;
 
 		problems.sort(() => Math.random() - 0.5);
-		const feedbackStatusOrder = [
-			"Awaiting Feedback",
-			"Awaiting Endorsement",
-			"Awaiting Testsolve",
-			"Needs Review",
-			"Testsolve Received",
-			"Complete",
-		];
 		problems.sort((a, b) => {
-			return (
-				feedbackStatusOrder.indexOf(a.feedback_status) -
-				feedbackStatusOrder.indexOf(b.feedback_status)
-			);
+			return a.endorsed - b.endorsed;
 		});
 		return problems;
 	} catch (error) {

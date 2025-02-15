@@ -128,7 +128,8 @@
 			value: "Endorsed",
 			short: "Endorsed",
 			icon: "ri-feedback-fill",
-			width: "10%"
+			width: "10%",
+			sort: (a, b) => a - b,
 		},
 		{
 			key: "problem_tests",

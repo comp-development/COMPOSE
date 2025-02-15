@@ -13,7 +13,7 @@
             .select(`
                 author_id,
                 status,
-                feedback_status,
+                unresolved_count,
                 users(full_name)
             `)
             .eq('archived', false)
@@ -48,8 +48,8 @@
             if (problem.status === "Endorsed") authorData.endorsed_count++;
             if (problem.status === "Idea") authorData.idea_count++;
 
-            // Update counts based on feedback_status
-            if (problem.feedback_status === "Needs Review") authorData.needs_review_count++;
+            // Update counts based on unresolved_count
+            if (problem.unresolved_count > 0) authorData.needs_review_count++;
 
             // Recalculate total score
             authorData.total_score =

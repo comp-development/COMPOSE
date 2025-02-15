@@ -189,6 +189,7 @@
 
     function sortProblems() {
         console.log("SORTING")
+        // TODO: updated stages
 		const statusOrder = ['Archived', 'Published', 'Draft', 'Idea', 'Endorsed', 'On Test'];
 		const stageOrder = ['Needs Review', 'Awaiting Feedback', 'Awaiting Endorsement', 'Awaiting Testsolve', 'Testsolve Received', 'Complete'];
 		problems = problems.sort((a, b) => {
@@ -197,8 +198,6 @@
 			if (statusComparison !== 0) {
 				return statusComparison; // Sort by status first
 			}
-			// If statuses are equal, sort by stage in descending order
-			return stageOrder.indexOf(b.feedback_status) - stageOrder.indexOf(a.feedback_status);
 		});
 	}
 
