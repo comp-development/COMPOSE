@@ -8,7 +8,7 @@
 		ToolbarSearch,
 		Pagination,
 		MultiSelect,
-		Tag
+		Tag,
 	} from "carbon-components-svelte";
 	import Rating from "$lib/components/Rating.svelte";
 	import { formatDate } from "$lib/formatDate.js";
@@ -42,7 +42,7 @@
 		"endorsed",
 		"unresolved_count",
 		"problem_tests",
-		"created_at"
+		"created_at",
 	];
 
 	const dispatch = createEventDispatcher();
@@ -70,47 +70,47 @@
 			value: "Author",
 			short: "Author",
 			icon: "ri-user-fill",
-			width: "10%"
+			width: "10%",
 		},
 		{
 			key: "topics_short",
 			value: "Topics",
 			short: "Topics",
 			icon: "ri-pie-chart-2-fill",
-			width: "12%"
+			width: "12%",
 		},
 		{
 			key: "sub_topics",
 			value: "Subtopics",
 			short: "SubTps",
 			icon: "ri-node-tree",
-			width: "20%"
+			width: "20%",
 		},
 		{
 			key: "average_difficulty",
 			value: "Difficulty",
 			short: "Diff",
 			icon: "ri-bar-chart-2-fill",
-			width: "7%"
+			width: "7%",
 		},
 		{
 			key: "average_quality",
 			value: "Quality",
 			short: "Qlty",
 			icon: "ri-star-fill",
-			width: "7%"
+			width: "7%",
 		},
 		{
 			key: "unresolved_count",
 			value: "Unresolved",
 			icon: "ri-flag-fill",
-			width: "10%"
+			width: "10%",
 		},
 		{
 			key: "feedback_count",
 			value: "Feedback",
 			icon: "ri-flag-fill",
-			width: "10%"
+			width: "10%",
 		},
 		{
 			key: "status",
@@ -119,9 +119,16 @@
 			icon: "ri-stairs-fill",
 			width: "10%",
 			sort: (a, b) => {
-				const order = ['Draft', 'Idea', 'Endorsed', 'On Test', 'Published', 'Archived'];
+				const order = [
+					"Draft",
+					"Idea",
+					"Endorsed",
+					"On Test",
+					"Published",
+					"Archived",
+				];
 				return order.indexOf(a) - order.indexOf(b);
-			}
+			},
 		},
 		{
 			key: "endorsed",
@@ -143,7 +150,7 @@
 			value: "Tests",
 			short: "Tests",
 			icon: "ri-file-list-3-fill",
-			width: "15%"
+			width: "15%",
 		},
 		{
 			key: "created_at",
@@ -157,7 +164,6 @@
 			icon: "ri-calendar-todo-fill",
 		},
 	];
-
 
 	$: headersF = headers.filter((row) => showList.includes(row.key));
 	$: curHeaders = [
@@ -219,14 +225,10 @@
 		try {
 			if (!draggable) return;
 			if (!draggingRow) return;
-			if (row === draggedRow) return;
-
-			e.preventDefault();
 			const ind = problems.indexOf(row);
 			lastDraggedInd = ind;
-			problems.splice(problems.indexOf(draggedRow), 1);
-			problems.splice(ind, 0, draggedRow);
-			problems = problems;
+			if (row === draggedRow) return;
+			e.preventDefault();
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
@@ -308,12 +310,9 @@
 				id: "edited_at",
 				text: "Edited on",
 			},
-			
 		]}
 	/>
 </div>
-
-
 
 <div
 	class="flex-dir-col"
@@ -373,7 +372,16 @@
 						style="visibility: {disableAll ? 'hidden' : 'visible'}"
 						class="drag-div"
 					>
-						<div style="margin-left: 10px;"><Switcher /></div>
+						<div
+							style="margin-left: 10px;"
+							class={problems.findIndex(
+								(p) => p.id == row.id && p.id != draggedRow?.id
+							) == lastDraggedInd
+								? "target-div"
+								: ""}
+						>
+							<Switcher />
+						</div>
 					</div>
 				{:else if cell.key === "problem_number"}
 					<div>
@@ -457,7 +465,7 @@
 				{:else if cell.key === "endorse_link"}
 					<div class="pencil">
 						<Link class="link" href={`/problems/endorse?problem_id=${row.id}`}>
-							<Trophy/>
+							<Trophy />
 						</Link>
 					</div>
 				{:else if cell.key === "problem_tests"}
@@ -500,6 +508,11 @@
 		align-items: center;
 		justify-content: center;
 		cursor: grab;
+	}
+
+	.target-div {
+		background-color: blue;
+		opacity: 20%;
 	}
 
 	.rating {
