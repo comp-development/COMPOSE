@@ -134,6 +134,7 @@
 		--large-gap: 30px;
 		--medium-gap: 20px;
 		--small-gap: 10px;
+		--primary: gray;
 	}
 
 	:global(h1) {
