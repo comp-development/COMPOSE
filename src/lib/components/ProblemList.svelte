@@ -84,7 +84,7 @@
 			value: "Subtopics",
 			short: "SubTps",
 			icon: "ri-node-tree",
-			width: "20%",
+			width: "15%",
 		},
 		{
 			key: "average_difficulty",
@@ -157,6 +157,7 @@
 			value: "Created",
 			short: "Create",
 			icon: "ri-calendar-event-fill",
+			width: "12%",
 		},
 		{
 			key: "edited_at",
@@ -258,6 +259,12 @@
 <div bind:clientWidth={width} class="align-items: right; display: flex;">
 	<MultiSelect
 		bind:selectedIds={showList}
+		on:select={({ detail }) => {
+			localStorage.setItem(
+				"problem-list.show-list",
+				JSON.stringify(detail.selectedIds)
+			);
+		}}
 		direction="top"
 		size="sm"
 		label="Filter visible columns"
@@ -315,6 +322,7 @@
 </div>
 
 <div
+	width={width}
 	class="flex-dir-col"
 	on:dragover={(e) => e.preventDefault()}
 	bind:this={tableContainerDiv}

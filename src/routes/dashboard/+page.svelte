@@ -14,7 +14,7 @@
 		getImages,
 		getProblemCounts,
 		getThisUser,
-        getThisUserRole,
+		getThisUserRole,
 		getProblems,
 		getProblemFeedback,
 	} from "$lib/supabase";
@@ -66,13 +66,12 @@
 
 	let problems = [];
 
-
 	let time_filtered_problems = [];
 	let problemCounts = [];
 	let width = 0;
 	let loaded = false;
 	let user;
-    let userRole;
+	let userRole;
 
 	let openModal = false;
 	let values = ["Problems", "Answers", "Solutions", "Comments"];
@@ -87,15 +86,15 @@
 
 	(async () => {
 		try {
-            user = (await getThisUser());
-            userRole = await getThisUserRole();
-			problems = await getProblems({ customEq: {"author_id": user.id} });
-            sortProblems();
+			user = await getThisUser();
+			userRole = await getThisUserRole();
+			problems = await getProblems({ customEq: { author_id: user.id } });
+			sortProblems();
 			console.log(scheme.progress.after);
 			time_filtered_problems = await getProblems({
 				after: new Date(scheme.progress.after),
 				before: new Date(scheme.progress.before),
-                customEq: {"author_id": user.id} 
+				customEq: { author_id: user.id },
 			});
 			console.log(time_filtered_problems.length);
 
@@ -126,7 +125,7 @@
 				sortedObj[key] = topicsCount[key];
 				return sortedObj;
 			}, {});
-			
+
 			loaded = true;
 		} catch (error) {
 			handleError(error);
@@ -187,14 +186,29 @@
 		loaded = true;
 	}
 
-    function sortProblems() {
-        console.log("SORTING")
-        // TODO: updated stages
-		const statusOrder = ['Archived', 'Published', 'Draft', 'Idea', 'Endorsed', 'On Test'];
-		const stageOrder = ['Needs Review', 'Awaiting Feedback', 'Awaiting Endorsement', 'Awaiting Testsolve', 'Testsolve Received', 'Complete'];
+	function sortProblems() {
+		console.log("SORTING");
+		// TODO: updated stages
+		const statusOrder = [
+			"Archived",
+			"Published",
+			"Draft",
+			"Idea",
+			"Endorsed",
+			"On Test",
+		];
+		const stageOrder = [
+			"Needs Review",
+			"Awaiting Feedback",
+			"Awaiting Endorsement",
+			"Awaiting Testsolve",
+			"Testsolve Received",
+			"Complete",
+		];
 		problems = problems.sort((a, b) => {
-			const statusComparison = statusOrder.indexOf(b.status) - statusOrder.indexOf(a.status);
-            console.log(statusComparison)
+			const statusComparison =
+				statusOrder.indexOf(b.status) - statusOrder.indexOf(a.status);
+			console.log(statusComparison);
 			if (statusComparison !== 0) {
 				return statusComparison; // Sort by status first
 			}
@@ -314,16 +328,16 @@
 	<Button title="Create a new problem" href="/problems/new" />
 </div>
 {#if userRole >= 30}
-    <div style="margin-top: 10px;">
-        <Button title="Problem Inventory" href="/problems" />
-    </div>
+	<div style="margin-top: 10px;">
+		<Button title="Problem Inventory" href="/problems" />
+	</div>
 {/if}
 <br />
 <div class="flex">
 	<div class="stats">
 		<h4><u>Your Stats</u></h4>
 		{#if loaded && false}
-            /**
+			/**
 			<ProgressBar
 				value={time_filtered_problems.length}
 				max={scheme.progress.goal}
@@ -333,7 +347,7 @@
 					" problems written"}
 				labelText={"Tournament Progress"}
 			/>
-            */
+			*/
 		{/if}
 		<p>
 			<strong>Number of Problems: {problems.length}</strong>
@@ -347,7 +361,7 @@
 		{/each}
 	</div>
 </div>
-<br>
+<br />
 <ul visibility: hidden>
 	{#each $messages as message}
 		<li>{message.role}: {message.content}</li>
@@ -355,10 +369,12 @@
 </ul>
 <br />
 <div style="width:80%; margin: auto;margin-bottom: 20px;">
-	<ProblemList 
-        {problems} 
-        sortKey={"feedback_status"}
-        sortDirection={"ascending"}/>
+	<ProblemList
+		{problems}
+		showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}
+		sortKey={"feedback_status"}
+		sortDirection={"ascending"}
+	/>
 </div>
 
 {#if openModal}
@@ -386,7 +402,7 @@
 			{/each}
 
 			<br />
-			<button on:click={openProblemsPDF}>Download Problems</button> 
+			<button on:click={openProblemsPDF}>Download Problems</button>
 			<br /><br />
 		</div>
 	</div>

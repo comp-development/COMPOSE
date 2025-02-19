@@ -265,10 +265,10 @@
 		{#if loadingProblems}
 			<p>Loading problems...</p>
 		{:else}
-			<div style="width: 80%; margin: auto; padding: 20px;">
+			<div style="width: 90%; margin: auto; padding: 20px;">
 				<ProblemList
 					{problems}
-					showList={[
+					showList={JSON.parse(localStorage.getItem("problem-list.show-list")) ?? [
 						"full_name",
 						"topics_short",
 						"sub_topics",

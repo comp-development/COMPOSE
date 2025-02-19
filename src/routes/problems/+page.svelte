@@ -556,7 +556,7 @@
 -->
 <br /><br />
 <div style="width:80%; margin: auto;margin-bottom: 20px;">
-	<ProblemList {problems} />
+	<ProblemList {problems} showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}/>
 </div>
 
 {#if openModal}

@@ -253,7 +253,9 @@
 				sortKey={"problem_number"}
 				sortDirection={"ascending"}
 				pageEnabled={false}
-				showList={[
+				showList={JSON.parse(
+					localStorage.getItem("problem-list.show-list")
+				) ?? [
 					"topics_short",
 					"sub_topics",
 					"average_difficulty",
@@ -274,7 +276,9 @@
 			<ProblemList
 				problems={allProblems}
 				selectable
-				showList={[
+				showList={JSON.parse(
+					localStorage.getItem("problem-list.show-list")
+				) ?? [
 					"topics_short",
 					"sub_topics",
 					"average_difficulty",

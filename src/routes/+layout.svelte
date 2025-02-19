@@ -329,9 +329,6 @@
 		border-color: var(--primary) !important;
 		outline-color: var(--primary) !important;
 	}
-	:global(.datatable) {
-		width: 80% !important;
-	}
 	:global(.link),
 	:global(.bx--data-table tr:hover .bx--link) {
 		color: var(--text-color-dark) !important;
