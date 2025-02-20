@@ -35,15 +35,21 @@
 	export let pageEnabled = true;
 	export let minWidth = 100;
 
-	export let showList = [
-		"full_name",
-		"topics_short",
-		"status",
-		"endorsed",
-		"unresolved_count",
-		"problem_tests",
-		"created_at",
-	];
+	export let showList = null;
+
+	// If showList is passed as null by the parent page, then we want to override
+	// with this default list.
+	if (!showList) {
+		showList = [
+			"full_name",
+			"topics_short",
+			"status",
+			"endorsed",
+			"unresolved_count",
+			"problem_tests",
+			"created_at",
+		];
+	}
 
 	const dispatch = createEventDispatcher();
 
@@ -322,7 +328,7 @@
 </div>
 
 <div
-	width={width}
+	{width}
 	class="flex-dir-col"
 	on:dragover={(e) => e.preventDefault()}
 	bind:this={tableContainerDiv}
