@@ -206,26 +206,26 @@
       ..range(calc.min(3, problems.len())).map(index => {
         // Special hacky case for certain problem for spacing.
         // TODO: @Tweoss (francis) remove this special case image to the right code.
-        if i * 3 + index + 1 == 4 {
-          enum.item(
-            i * 3 + index + 1,
-            grid(
-              columns: (auto, 120pt),
-              eval(
-                convert_to_typst(
-                  problems.at(index).problem_latex.replace("\n\\image{/image/SMTSemicirclesFinal.png}", ""),
-                ),
-                mode: "markup",
-                scope: mitex-scope,
-              ),
-              image(
-                "problem_images/image/SMTSemicirclesFinal.png",
-                height: 120pt,
-                fit: "contain",
-              ),
-            ),
-          )
-        } else {
+        // if i * 3 + index + 1 == 4 {
+        //   enum.item(
+        //     i * 3 + index + 1,
+        //     grid(
+        //       columns: (auto, 120pt),
+        //       eval(
+        //         convert_to_typst(
+        //           problems.at(index).problem_latex.replace("\n\\image{/image/SMTSemicirclesFinal.png}", ""),
+        //         ),
+        //         mode: "markup",
+        //         scope: mitex-scope,
+        //       ),
+        //       image(
+        //         "problem_images/image/SMTSemicirclesFinal.png",
+        //         height: 120pt,
+        //         fit: "contain",
+        //       ),
+        //     ),
+        //   )
+        // } else {
           enum.item(
             i * 3 + index + 1,
             eval(
@@ -234,7 +234,7 @@
               scope: mitex-scope,
             ),
           )
-        }
+        // }
       }),
     )
   ]
