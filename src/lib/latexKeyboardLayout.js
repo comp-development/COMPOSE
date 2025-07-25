@@ -20,6 +20,7 @@ export const latexLayout = [
 			["\\pm", "", "±"],
 			["\\sqrt{", "}", "√x"],
 			["\\sqrt[", "]{}", "n√x"],
+			["\\lfloor","\\rfloor","⌊x⌋"],
 		],
 	},
 	{
