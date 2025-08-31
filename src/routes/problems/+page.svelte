@@ -23,6 +23,7 @@
 		getProblemFeedback,
 	} from "$lib/supabase";
 	import { List, Schematics } from "carbon-icons-svelte";
+	import ProblemFilters from "$lib/components/ProblemFilters.svelte";
 	Chart.register(...registerables);
 	Chart.register(annotationPlugin);
 	
@@ -88,6 +89,9 @@
 	let group = values.slice(0, 1);
 
 	let scheme = {};
+
+	// Filters handled by ProblemFilters component
+	let filteredProblems = [];
 
 	onMount(async () => {
 		// Fetch settings from the database
@@ -292,7 +296,8 @@
 			let lineChart;
 
 			lineChart = new Chart(ctx, {type: 'line', data: data, options});
-				//getProblemLink();
+
+			filteredProblems = [...problems];
 			
 		} catch (error) {
 			handleError(error);
@@ -555,8 +560,12 @@
 <Button action={resetProblems} title="Clear Filter" />
 -->
 <br /><br />
+{#if loaded}
+	<ProblemFilters problems={problems} bind:filtered={filteredProblems} />
+{/if}
+
 <div style="width:80%; margin: auto;margin-bottom: 20px;">
-	<ProblemList {problems} showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}/>
+	<ProblemList problems={filteredProblems} showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}/>
 </div>
 
 {#if openModal}

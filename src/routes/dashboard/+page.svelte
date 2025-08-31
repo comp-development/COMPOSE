@@ -5,7 +5,7 @@
 	import ProblemList from "$lib/components/ProblemList.svelte";
 	import ProgressBar from "$lib/components/ProgressBar.svelte";
 	import Button from "$lib/components/Button.svelte";
-	import { Checkbox, TextArea } from "carbon-components-svelte";
+	import { Checkbox } from "carbon-components-svelte";
 	import { onMount } from "svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
@@ -18,8 +18,7 @@
 		getProblems,
 		getProblemFeedback,
 	} from "$lib/supabase";
-	import { List, Schematics } from "carbon-icons-svelte";
-	import { Dropdown, MultiSelect } from "carbon-components-svelte";
+	import ProblemFilters from "$lib/components/ProblemFilters.svelte";
 
 	const datasetPrompt = `
 		The database you have access to is a view called full_problems. English descriptions of the database columns with each column type in parenthesis are given below:
@@ -66,7 +65,6 @@
 	});
 
 	let problems = [];
-	let filteredProblems = [];
 
 	let time_filtered_problems = [];
 	let problemCounts = [];
@@ -81,11 +79,104 @@
 
 	let scheme = {};
 
-	// Test filtering variables
 	let allTests = [];
 	let selectedTests = [];
-	let sortBy = "difficulty";
-	let sortDirection = "asc";
+	let allTopics = [];
+	let selectedTopics = [];
+	let titleQuery = "";
+	let filteredProblems = [];
+
+	let allStages = [];
+	let selectedStages = [];
+	const endorsedOptions = [
+		{ id: "yes", text: "Endorsed" },
+		{ id: "no", text: "Not Endorsed" },
+	];
+	let selectedEndorsed = [];
+
+	function extractTests() {
+		const testCounts = {};
+		(problems || []).forEach((problem) => {
+			if (problem.problem_tests) {
+				const tests = problem.problem_tests.split(", ").map((t) => t.trim());
+				tests.forEach((t) => {
+					testCounts[t] = (testCounts[t] || 0) + 1;
+				});
+			}
+		});
+		allTests = Object.keys(testCounts)
+			.sort()
+			.map((test) => ({ id: test, text: `${test} (${testCounts[test]})`, count: testCounts[test] }));
+	}
+
+	function extractTopics() {
+		const topicCounts = {};
+		(problems || []).forEach((problem) => {
+			if (problem.topics) {
+				problem.topics.split(", ").map((tp) => tp.trim()).forEach((tp) => {
+					topicCounts[tp] = (topicCounts[tp] || 0) + 1;
+				});
+			}
+		});
+		allTopics = Object.keys(topicCounts)
+			.sort()
+			.map((topic) => ({ id: topic, text: `${topic} (${topicCounts[topic]})`, count: topicCounts[topic] }));
+	}
+
+	function extractStages() {
+		const stageCounts = {};
+		(problems || []).forEach((p) => {
+			if (p.status) {
+				stageCounts[p.status] = (stageCounts[p.status] || 0) + 1;
+			}
+		});
+		allStages = Object.keys(stageCounts)
+			.sort()
+			.map((stage) => ({ id: stage, text: `${stage} (${stageCounts[stage]})`, count: stageCounts[stage] }));
+	}
+
+	function applyFilters() {
+		let result = [...(problems || [])];
+
+		if (selectedTests.length > 0) {
+			result = result.filter((p) => {
+				if (!p.problem_tests) return false;
+				const tests = p.problem_tests.split(", ").map((t) => t.trim());
+				return selectedTests.some((sel) => tests.includes(sel));
+			});
+		}
+
+		if (selectedTopics.length > 0) {
+			result = result.filter((p) => {
+				if (!p.topics) return false;
+				const topics = p.topics.split(", ").map((t) => t.trim());
+				return selectedTopics.some((sel) => topics.includes(sel));
+			});
+		}
+
+		if (selectedStages.length > 0) {
+			result = result.filter((p) => selectedStages.includes(p.status));
+		}
+
+		if (selectedEndorsed.length > 0 && selectedEndorsed.length < 2) {
+			const wantYes = selectedEndorsed.includes("yes");
+			result = result.filter((p) => (wantYes ? !!p.endorsed : !p.endorsed));
+		}
+
+		if (titleQuery && titleQuery.trim().length > 0) {
+			const q = titleQuery.trim().toLowerCase();
+			result = result.filter((p) => {
+				const nick = (p.nickname || "").toLowerCase();
+				const fid = (p.front_id || "").toLowerCase();
+				return nick.includes(q) || fid.includes(q);
+			});
+		}
+
+		filteredProblems = result;
+	}
+
+	$: problems, extractTests(), extractTopics(), extractStages(), applyFilters();
+	$: selectedTests, selectedTopics, selectedStages, selectedEndorsed, titleQuery, applyFilters();
 
 	onMount(async () => {
 		// Fetch settings from the database
@@ -99,8 +190,8 @@
 			problems = await getProblems({ customEq: { author_id: user.id } });
 			sortProblems();
 			extractTests();
+			extractTopics();
 			filteredProblems = [...problems];
-			applyFiltersAndSort();
 			console.log(scheme.progress.after);
 			time_filtered_problems = await getProblems({
 				after: new Date(scheme.progress.after),
@@ -181,8 +272,6 @@
 					.then((result) => {
 						console.log(result);
 						problems = result;
-						extractTests();
-						applyFiltersAndSort();
 						console.log("Async code execution completed.");
 					})
 					.catch((error) => {
@@ -197,11 +286,6 @@
 		}
 
 		loaded = true;
-	}
-
-	// Reactive statements to update filters when dependencies change
-	$: if (problems.length > 0 && (selectedTests || sortBy || sortDirection)) {
-		applyFiltersAndSort();
 	}
 
 	function sortProblems() {
@@ -231,67 +315,6 @@
 				return statusComparison; // Sort by status first
 			}
 		});
-	}
-
-	function extractTests() {
-		const testCounts = {};
-		problems.forEach((problem) => {
-			if (problem.problem_tests) {
-				const tests = problem.problem_tests
-					.split(", ")
-					.map((test) => test.trim());
-				tests.forEach((test) => {
-					testCounts[test] = (testCounts[test] || 0) + 1;
-				});
-			}
-		});
-
-		const sortedTests = Object.keys(testCounts).sort();
-		allTests = sortedTests.map((test) => ({
-			id: test,
-			text: `${test} (${testCounts[test]})`,
-			count: testCounts[test],
-		}));
-	}
-
-	function applyFiltersAndSort() {
-		if (!problems || problems.length === 0) {
-			filteredProblems = [];
-			return;
-		}
-
-		// Filter by test
-		let filtered = [...problems];
-		if (selectedTests.length > 0) {
-			filtered = problems.filter((problem) => {
-				if (!problem.problem_tests) return false;
-				const tests = problem.problem_tests
-					.split(", ")
-					.map((test) => test.trim());
-				return selectedTests.some((selectedTest) =>
-					tests.includes(selectedTest)
-				);
-			});
-		}
-
-		// Sort by selected criteria
-		filtered = filtered.sort((a, b) => {
-			let comparison = 0;
-
-			if (sortBy === "difficulty") {
-				const diffA = a.difficulty || 0;
-				const diffB = b.difficulty || 0;
-				comparison = diffA - diffB;
-			} else if (sortBy === "topics") {
-				const topicsA = a.topics || "";
-				const topicsB = b.topics || "";
-				comparison = topicsA.localeCompare(topicsB);
-			}
-
-			return sortDirection === "asc" ? comparison : -comparison;
-		});
-
-		filteredProblems = filtered;
 	}
 
 	async function getBucketPaths(path) {
@@ -448,81 +471,11 @@
 </ul>
 <br />
 
-{#if loaded}
-	<div class="filter-container">
-		<div class="filter-header">
-			<h3>Filter & Sort Problems</h3>
-			{#if selectedTests.length > 0 || sortBy !== "difficulty" || sortDirection !== "asc"}
-				<Button
-					title="Clear Filters"
-					on:click={() => {
-						selectedTests = [];
-						sortBy = "difficulty";
-						sortDirection = "asc";
-					}}
-					kind="ghost"
-					size="small"
-				/>
-			{/if}
-		</div>
+<ProblemFilters problems={problems} bind:filtered={filteredProblems} />
 
-		<div class="filter-controls">
-			<div class="filter-group">
-				<MultiSelect
-					titleText="Filter by Tests"
-					label="Select tests..."
-					bind:selectedIds={selectedTests}
-					items={allTests}
-					sortItem={() => {}}
-				/>
-			</div>
-
-			<div class="filter-group">
-				<Dropdown
-					titleText="Sort by"
-					bind:selectedId={sortBy}
-					items={[
-						{ id: "difficulty", text: "Difficulty" },
-						{ id: "topics", text: "Topics" },
-					]}
-				/>
-			</div>
-
-			<div class="filter-group">
-				<Dropdown
-					titleText="Direction"
-					bind:selectedId={sortDirection}
-					items={[
-						{ id: "asc", text: "Ascending" },
-						{ id: "desc", text: "Descending" },
-					]}
-				/>
-			</div>
-
-			<div class="results-count">
-				<p>
-					Showing <strong>{filteredProblems.length}</strong> of
-					<strong>{problems.length}</strong> problems
-				</p>
-				{#if selectedTests.length > 0}
-					<div class="filter-tags">
-						{#each selectedTests as test}
-							<span class="filter-tag">
-								<i class="fa-solid fa-filter" />
-								{test}
-							</span>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
-	</div>
-{/if}
-
-<br />
 <div style="width:80%; margin: auto;margin-bottom: 20px;">
 	<ProblemList
-		problems={loaded ? filteredProblems : problems}
+		problems={filteredProblems}
 		showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}
 		sortKey={"feedback_status"}
 		sortDirection={"ascending"}
@@ -568,89 +521,5 @@
 		margin: 10px;
 		text-align: left;
 		padding: 10px;
-	}
-
-	.filter-container {
-		width: 80%;
-		margin: 20px auto;
-		background-color: white;
-		border: 1px solid var(--primary);
-		border-radius: 8px;
-		padding: 20px;
-	}
-
-	.filter-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 20px;
-		border-bottom: 1px solid #e0e0e0;
-		padding-bottom: 10px;
-	}
-
-	.filter-header h3 {
-		margin: 0;
-		color: var(--primary);
-	}
-
-	.filter-controls {
-		display: flex;
-		gap: 20px;
-		align-items: end;
-		flex-wrap: wrap;
-	}
-
-	.filter-group {
-		min-width: 180px;
-		flex: 1;
-	}
-
-	.results-count {
-		margin-left: auto;
-		text-align: right;
-		display: flex;
-		flex-direction: column;
-		gap: 5px;
-	}
-
-	.results-count p {
-		margin: 0;
-		color: var(--primary);
-	}
-
-	.filter-tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 5px;
-	}
-
-	.filter-tag {
-		background-color: var(--primary);
-		color: white;
-		padding: 4px 8px;
-		border-radius: 4px;
-		font-size: 12px;
-		white-space: nowrap;
-	}
-
-	.filter-tag i {
-		margin-right: 4px;
-	}
-
-	@media (max-width: 768px) {
-		.filter-controls {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.results-count {
-			margin-left: 0;
-			text-align: left;
-			margin-top: 15px;
-		}
-
-		.filter-group {
-			min-width: 100%;
-		}
 	}
 </style>
