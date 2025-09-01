@@ -26,7 +26,7 @@
 	user.subscribe(async (v) => {
 		try {
 			user_id = v.id;
-			data = await getUser(user_id);
+			const data = await getUser(user_id);
 			({
 				full_name,
 				discord,
