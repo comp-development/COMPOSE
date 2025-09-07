@@ -68,6 +68,7 @@ export async function GET({ params }) {
     }
   ];
 
+  //TODO: Maybe make it so it can export and import problem images in the future? May not be possible through
   const problem_images: any[] = [];
 
   // Final payload
