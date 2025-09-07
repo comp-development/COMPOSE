@@ -243,29 +243,17 @@
 		</div>
 		<br />
 		{#if userIsTestCoordinator}
-			<Button kind="tertiary"
-					type="submit"
-					size="small"href={`/tests/${testId}/edit`}>Edit Test</Button>
+			<Button kind="tertiary" type="submit" size="small"href={`/tests/${testId}/edit`}>Edit Test</Button>
 			
-			<Button kind="tertiary"
-					type="submit"
-					size="small" href={`/tests/${testId}/testsolve`}>Manage TestSolves</Button>
+			<Button kind="tertiary" type="submit" size="small" href={`/tests/${testId}/testsolve`}>Manage TestSolves</Button>
 			
-			<Button kind="tertiary"
-					type="submit"
-					size="small" href={`/tests/${testId}/layout`}>Print Test</Button>
+			<Button kind="tertiary" type="submit" size="small" href={`/tests/${testId}/layout`}>Print Test</Button>
 			
-			<Button kind="tertiary"
-					type="submit"
-					size="small"  href={`/tests/${testId}/feedback`}>Manage Feedback</Button>
+			<Button kind="tertiary" type="submit" size="small"  href={`/tests/${testId}/feedback`}>Manage Feedback</Button>
 			
-			<Button kind="tertiary"
-					type="submit"
-					size="small"  on:click={downloadTestAsCsv}>Download Test As CSV</Button>
+			<Button kind="tertiary" type="submit" size="small"  on:click={downloadTestAsCsv}>Download Test As CSV</Button>
 			
-			<Button kind="tertiary"
-					type="submit"
-					size="small" href={`/tests/${testId}/serve`}>Download Test As JSON</Button>
+			<Button kind="tertiary" type="submit" size="small" href={`/tests/${testId}/serve`}>Download Test As JSON</Button>
 		{/if}
 		{#if loadingProblems}
 			<p>Loading problems...</p>

@@ -46,9 +46,9 @@ export async function GET({ params }) {
     problems = probs ?? [];
   }
 
-  // IMPORTANT: Your importer does `problem_number + 1` on import.
+  // NOTE: COMP importer importer does `problem_number + 1` on import.
   // COMPOSE usually stores problem numbers 1-based, so we export 0-based here.
-  // If your `test_problems.problem_number` is already 0-based, remove the `- 1` below.
+  // If `test_problems.problem_number` is already 0-based, remove the `- 1` below.
   const test_problems = (tps ?? []).map((tp) => ({
     test_id: test.id,
     problem_id: tp.problem_id,
@@ -62,13 +62,12 @@ export async function GET({ params }) {
       id: test.id,
       test_name: test.test_name,
       test_description: test.test_description ?? '',
-      is_team: false,              // set if you track this separately
+      is_team: false,      
       tournament_id: test.tournament_id,
-      bounding_boxes: '{}'         // importer does JSON.parse on this
+      bounding_boxes: '{}'
     }
   ];
 
-  // Minimal problem images (empty is OK; importer handles it)
   const problem_images: any[] = [];
 
   // Final payload
