@@ -56,7 +56,7 @@
 		} else if (listing.type === "image") {
 			listing.expanded = !listing.expanded;
 			curListing = curListing;
-			add("problem", " $\\image{" + listing.folderString + listing.name + "}$");
+			add("problem", " \\image{" + listing.folderString + listing.name + "}");
 		}
 	}
 
