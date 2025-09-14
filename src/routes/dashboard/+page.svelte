@@ -5,7 +5,7 @@
 	import ProblemList from "$lib/components/ProblemList.svelte";
 	import ProgressBar from "$lib/components/ProgressBar.svelte";
 	import Button from "$lib/components/Button.svelte";
-	import { Checkbox, TextArea } from "carbon-components-svelte";
+	import { Checkbox } from "carbon-components-svelte";
 	import { onMount } from "svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
@@ -18,27 +18,27 @@
 		getProblems,
 		getProblemFeedback,
 	} from "$lib/supabase";
-	import { List, Schematics } from "carbon-icons-svelte";
+	import ProblemFilters from "$lib/components/ProblemFilters.svelte";
 
 	const datasetPrompt = `
 		The database you have access to is a view called full_problems. English descriptions of the database columns with each column type in parenthesis are given below:
-			answer_latex (string | null): The answer to the problem written in LaTeX;  
+			answer_latex (string | null): The answer to the problem written in LaTeX;
 			archived (boolean | null): Whether the problem has been archived;
-			author_id (string | null): Supabase ID of the user who wrote the problem; 
-			comment_latex (string | null): Comments given by the author of the problem written in LaTeX; 
-			created_at (string | null): Timestamp problem was created at; 
-			difficulty (number | null): Difficulty rating of the problem; 
-			edited_at (string | null): Timestamp the problem was last edited at; 
+			author_id (string | null): Supabase ID of the user who wrote the problem;
+			comment_latex (string | null): Comments given by the author of the problem written in LaTeX;
+			created_at (string | null): Timestamp problem was created at;
+			difficulty (number | null): Difficulty rating of the problem;
+			edited_at (string | null): Timestamp the problem was last edited at;
 			front_id (string | null): An identifier for each problem given by the first 3 letters of the author's full name with the id number;
-			full_name (string | null): Name of the author of the problem; 
-			id (number | null): Unique ID number of the problem; 
-			nickname (string | null): Nickname for each problem; 
+			full_name (string | null): Name of the author of the problem;
+			id (number | null): Unique ID number of the problem;
+			nickname (string | null): Nickname for each problem;
 			problem_latex (string | null): The problem written in LaTeX;
 			problem_tests (string | null): Comma-separated list of all tests that the problem appears on written as a single string;
 			solution_latex (string | null): The solution to the problem written in LaTeX;
-			sub_topics (string | null): Comma-separated list of topics which appear in the problem – sub-topics are more granular than topics and tend to cover tactics or themes present in the problem and solution; 
-			topics (string | null): Comma-separated list of the overall topics that appear in the problem – all topics are chosen from Algebra, Calculus, Combinatorics, Number Theory, Geometry; 
-			topics_short (string | null): The same as the topics field but the names are shortened to Alg, Calc, Combo, NT, Geo for Algebra, Calculus, Combinatorics, Number Theory, Geometry respectively; 
+			sub_topics (string | null): Comma-separated list of topics which appear in the problem – sub-topics are more granular than topics and tend to cover tactics or themes present in the problem and solution;
+			topics (string | null): Comma-separated list of the overall topics that appear in the problem – all topics are chosen from Algebra, Calculus, Combinatorics, Number Theory, Geometry;
+			topics_short (string | null): The same as the topics field but the names are shortened to Alg, Calc, Combo, NT, Geo for Algebra, Calculus, Combinatorics, Number Theory, Geometry respectively;
 			unresolved_count (number | null): The number of unresolved pieces of feedback the problem has;
 	`;
 
@@ -79,6 +79,105 @@
 
 	let scheme = {};
 
+	let allTests = [];
+	let selectedTests = [];
+	let allTopics = [];
+	let selectedTopics = [];
+	let titleQuery = "";
+	let filteredProblems = [];
+
+	let allStages = [];
+	let selectedStages = [];
+	const endorsedOptions = [
+		{ id: "yes", text: "Endorsed" },
+		{ id: "no", text: "Not Endorsed" },
+	];
+	let selectedEndorsed = [];
+
+	function extractTests() {
+		const testCounts = {};
+		(problems || []).forEach((problem) => {
+			if (problem.problem_tests) {
+				const tests = problem.problem_tests.split(", ").map((t) => t.trim());
+				tests.forEach((t) => {
+					testCounts[t] = (testCounts[t] || 0) + 1;
+				});
+			}
+		});
+		allTests = Object.keys(testCounts)
+			.sort()
+			.map((test) => ({ id: test, text: `${test} (${testCounts[test]})`, count: testCounts[test] }));
+	}
+
+	function extractTopics() {
+		const topicCounts = {};
+		(problems || []).forEach((problem) => {
+			if (problem.topics) {
+				problem.topics.split(", ").map((tp) => tp.trim()).forEach((tp) => {
+					topicCounts[tp] = (topicCounts[tp] || 0) + 1;
+				});
+			}
+		});
+		allTopics = Object.keys(topicCounts)
+			.sort()
+			.map((topic) => ({ id: topic, text: `${topic} (${topicCounts[topic]})`, count: topicCounts[topic] }));
+	}
+
+	function extractStages() {
+		const stageCounts = {};
+		(problems || []).forEach((p) => {
+			if (p.status) {
+				stageCounts[p.status] = (stageCounts[p.status] || 0) + 1;
+			}
+		});
+		allStages = Object.keys(stageCounts)
+			.sort()
+			.map((stage) => ({ id: stage, text: `${stage} (${stageCounts[stage]})`, count: stageCounts[stage] }));
+	}
+
+	function applyFilters() {
+		let result = [...(problems || [])];
+
+		if (selectedTests.length > 0) {
+			result = result.filter((p) => {
+				if (!p.problem_tests) return false;
+				const tests = p.problem_tests.split(", ").map((t) => t.trim());
+				return selectedTests.some((sel) => tests.includes(sel));
+			});
+		}
+
+		if (selectedTopics.length > 0) {
+			result = result.filter((p) => {
+				if (!p.topics) return false;
+				const topics = p.topics.split(", ").map((t) => t.trim());
+				return selectedTopics.some((sel) => topics.includes(sel));
+			});
+		}
+
+		if (selectedStages.length > 0) {
+			result = result.filter((p) => selectedStages.includes(p.status));
+		}
+
+		if (selectedEndorsed.length > 0 && selectedEndorsed.length < 2) {
+			const wantYes = selectedEndorsed.includes("yes");
+			result = result.filter((p) => (wantYes ? !!p.endorsed : !p.endorsed));
+		}
+
+		if (titleQuery && titleQuery.trim().length > 0) {
+			const q = titleQuery.trim().toLowerCase();
+			result = result.filter((p) => {
+				const nick = (p.nickname || "").toLowerCase();
+				const fid = (p.front_id || "").toLowerCase();
+				return nick.includes(q) || fid.includes(q);
+			});
+		}
+
+		filteredProblems = result;
+	}
+
+	$: problems, extractTests(), extractTopics(), extractStages(), applyFilters();
+	$: selectedTests, selectedTopics, selectedStages, selectedEndorsed, titleQuery, applyFilters();
+
 	onMount(async () => {
 		// Fetch settings from the database
 		scheme = await fetchSettings();
@@ -90,6 +189,9 @@
 			userRole = await getThisUserRole();
 			problems = await getProblems({ customEq: { author_id: user.id } });
 			sortProblems();
+			extractTests();
+			extractTopics();
+			filteredProblems = [...problems];
 			console.log(scheme.progress.after);
 			time_filtered_problems = await getProblems({
 				after: new Date(scheme.progress.after),
@@ -368,9 +470,12 @@
 	{/each}
 </ul>
 <br />
+
+<ProblemFilters problems={problems} bind:filtered={filteredProblems} />
+
 <div style="width:80%; margin: auto;margin-bottom: 20px;">
 	<ProblemList
-		{problems}
+		problems={filteredProblems}
 		showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}
 		sortKey={"feedback_status"}
 		sortDirection={"ascending"}
