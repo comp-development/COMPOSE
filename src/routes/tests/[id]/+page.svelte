@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { page } from "$app/stores";
 	import ProblemList from "$lib/components/ProblemList.svelte";
-	import { Button, Loading } from "carbon-components-svelte";
+	import Button from "$lib/components/Button.svelte";
+	import { Loading } from "carbon-components-svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
 	import {
@@ -10,7 +11,6 @@
 		getThisUser,
 		getThisUserRole,
 	} from "$lib/supabase";
-	import { Download } from "carbon-icons-svelte";
 
 	let testId = Number($page.params.id);
 	let test;
@@ -243,17 +243,18 @@
 		</div>
 		<br />
 		{#if userIsTestCoordinator}
-			<Button kind="tertiary" type="submit" size="small"href={`/tests/${testId}/edit`}>Edit Test</Button>
-			
-			<Button kind="tertiary" type="submit" size="small" href={`/tests/${testId}/testsolve`}>Manage TestSolves</Button>
-			
-			<Button kind="tertiary" type="submit" size="small" href={`/tests/${testId}/layout`}>Print Test</Button>
-			
-			<Button kind="tertiary" type="submit" size="small"  href={`/tests/${testId}/feedback`}>Manage Feedback</Button>
-			
-			<Button kind="tertiary" type="submit" size="small"  on:click={downloadTestAsCsv}>Download Test As CSV</Button>
-			
-			<Button kind="tertiary" type="submit" size="small" href={`/tests/${testId}/serve`}>Download Test As JSON</Button>
+			<Button href={`/tests/${testId}/edit`} title="Edit problems" />
+			<br /><br />
+			<Button href={`/tests/${testId}/testsolve`} title="Manage testsolves" />
+			<br /><br />
+			<Button
+				href={`/tests/${testId}/layout`}
+				title="Print Test"
+			/>
+			<br /><br />
+			<Button href={`/tests/${testId}/feedback`} title="Manage Feedback" />
+			<br /><br />
+			<Button action={downloadTestAsCsv} title="Download Test As CSV" />
 		{/if}
 		{#if loadingProblems}
 			<p>Loading problems...</p>
