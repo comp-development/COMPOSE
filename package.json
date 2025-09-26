@@ -18,7 +18,7 @@
 		"prettier": "^2.7.1",
 		"prettier-plugin-svelte": "^2.10.1",
 		"rollup-plugin-node-builtins": "^2.1.2",
-		"supabase": "^1.204.3",
+		"supabase": "^1.226.4",
 		"svelte": "^4.0.0",
 		"typescript": "^5.0.0"
 	},
