@@ -262,7 +262,7 @@ export async function makeProblemThread(problem: ProblemRequest) {
 		body: JSON.stringify({
 			// channel_id: scheme.discord.notifs_channel,
 			message: {
-				content: problem.problem_latex + user.discord_id ? ` <@${user.discord_id}>` : '',
+				content: problem.problem_latex + (user.discord_id ? ` <@${user.discord_id}>` : ''),
 				embeds: [embed],
 				components: [
 					{
