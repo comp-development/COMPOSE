@@ -411,6 +411,25 @@
   mitex-convert(mode: "text", macros + replace_image(latex, convert_to_typst))
 }
 
+// Override the image function to display the path for missing images.
+// Sourced from https://sitandr.github.io/typst-examples-book/book/typstonomicon/try_catch.html
+#let scope = mitex-scope
+#let maybe-image(path, ..args) = context {
+  let path-label = label(path)
+  let first-time = query((context { }).func()).len() == 0
+  if first-time or query(path-label).len() > 0 {
+    [#image(path, ..args)#path-label]
+  } else {
+    rect(width: 50%, height: 5em, fill: luma(235), stroke: 1pt)[
+      #set align(center + horizon)
+      Could not find #raw(path)
+    ]
+  }
+}
+#{ scope.image = maybe-image }
+#let mitex-scope = scope
+#let image = maybe-image
+
 #set enum(tight: false)
 #enum(
   ..problems
