@@ -282,6 +282,20 @@ export async function makeProblemThread(problem: ProblemRequest) {
 	if (threadData.id) {
 		await editProblem({ discord_id: threadData.id }, problem.id);
 		problem.discord_id = threadData.id;
+
+		try {
+					// Add problem author to the channel
+			await fetch("api/discord/thread-members", {
+				method: "PUT",
+				body: JSON.stringify({
+					id: threadData.id,
+					user_id: user.discord_id,
+				})
+			});
+		} catch (e) {
+			console.error("Issue adding author to thread:", e);
+		}
+
 		success = true;
 	}
 	console.log("AUTHORID", problem.author_id);
@@ -392,7 +406,7 @@ export async function updateProblemThread(problem_id: number, author_name: strin
 	const { tagIds } = await tagResponse.json();
 	console.log("MAKING FETCH");
 	console.log("PROBLEM", problem.problem_latex);
-	
+
 	const threadResponse = await fetch("/api/discord/update-thread", {
 		method: "PATCH",
 		body: JSON.stringify({
