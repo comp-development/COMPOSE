@@ -262,7 +262,7 @@ export async function makeProblemThread(problem: ProblemRequest) {
 		body: JSON.stringify({
 			// channel_id: scheme.discord.notifs_channel,
 			message: {
-				content: problem.problem_latex,
+				content: problem.problem_latex + user.discord_id ? ` <@${user.discord_id}>` : '',
 				embeds: [embed],
 				components: [
 					{
@@ -282,20 +282,6 @@ export async function makeProblemThread(problem: ProblemRequest) {
 	if (threadData.id) {
 		await editProblem({ discord_id: threadData.id }, problem.id);
 		problem.discord_id = threadData.id;
-
-		try {
-					// Add problem author to the channel
-			await fetch("api/discord/thread-members", {
-				method: "PUT",
-				body: JSON.stringify({
-					id: threadData.id,
-					user_id: user.discord_id,
-				})
-			});
-		} catch (e) {
-			console.error("Issue adding author to thread:", e);
-		}
-
 		success = true;
 	}
 	console.log("AUTHORID", problem.author_id);
