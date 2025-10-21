@@ -262,7 +262,7 @@ export async function makeProblemThread(problem: ProblemRequest) {
 		body: JSON.stringify({
 			// channel_id: scheme.discord.notifs_channel,
 			message: {
-				content: problem.problem_latex,
+				content: problem.problem_latex + (user.discord_id ? ` <@${user.discord_id}>` : ''),
 				embeds: [embed],
 				components: [
 					{
@@ -392,7 +392,7 @@ export async function updateProblemThread(problem_id: number, author_name: strin
 	const { tagIds } = await tagResponse.json();
 	console.log("MAKING FETCH");
 	console.log("PROBLEM", problem.problem_latex);
-	
+
 	const threadResponse = await fetch("/api/discord/update-thread", {
 		method: "PATCH",
 		body: JSON.stringify({
