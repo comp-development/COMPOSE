@@ -9,6 +9,7 @@
 	import { downloadBlob } from "../utils/download";
 	import { handleError } from "../handleError";
 	import { onMount } from "svelte";
+	import * as JSZip from "jszip";
 
 	export let on_template_save: (source: string) => void = (_) => {};
 	export let on_answer_position_update: (source: string) => void = (_) => {};
@@ -35,9 +36,38 @@
 		console.warn("compiler may have already been initialized", e);
 	}
 
+	let jszip = new JSZip();
+	async function resetShadow() {
+		jszip = new JSZip();
+		await Typst.resetShadow();
+	}
+	async function mapShadow(path: string, bytes: Uint8Array) {
+		jszip.file(path, bytes);
+		await Typst.mapShadow(path, bytes);
+	}
+	async function downloadZIP() {
+		await jszip.generateAsync({ type: "blob" }).then(
+			function (blob) {
+				const a = document.createElement("a"),
+					url = URL.createObjectURL(blob);
+				a.href = url;
+				a.download = "test_layout.zip";
+				document.body.appendChild(a);
+				a.click();
+				setTimeout(function () {
+					document.body.removeChild(a);
+					window.URL.revokeObjectURL(url);
+				}, 0);
+			},
+			function (err) {
+				toast.error("Failed to generate blob " + err);
+			}
+		);
+	}
+
 	onMount(async () => {
 		// Map metadata and problems into the virtual file system.
-		await Typst.resetShadow();
+		await resetShadow();
 
 		let utf8Encode = new TextEncoder();
 
@@ -47,12 +77,12 @@
 		);
 
 		await Promise.all([
-			Typst.mapShadow("/assets/test_logo.png", new Uint8Array(test_logo)),
-			Typst.mapShadow(
+			mapShadow("/assets/test_logo.png", new Uint8Array(test_logo)),
+			mapShadow(
 				"/assets/problems.json",
 				utf8Encode.encode(JSON.stringify(problems))
 			),
-			Typst.mapShadow(
+			mapShadow(
 				"/answer_sheet_compiling.toml",
 				utf8Encode.encode("[config]\nlocal = false")
 			),
@@ -78,7 +108,7 @@
 		}
 		await Promise.all(
 			images.map(async (image) => {
-				return await Typst.mapShadow(
+				return await mapShadow(
 					"/problem_images" + image.name,
 					new Uint8Array(await image.blob.arrayBuffer())
 				);
@@ -108,7 +138,7 @@
 				solutions: is_selected("Solutions"),
 			},
 		});
-		await Typst.mapShadow(
+		await mapShadow(
 			"/assets/test_metadata.json",
 			new TextEncoder().encode(test_metadata)
 		);
@@ -119,13 +149,9 @@
 		e.target.innerText = "Processing";
 
 		try {
-			await Typst.mapShadow(
-				"/main.typ",
-				new TextEncoder().encode(template_body)
-			);
+			await mapShadow("/main.typ", new TextEncoder().encode(template_body));
 			const pdf_array = await Typst.pdf({ mainFilePath: "/main.typ" });
 			downloadBlob(pdf_array, test.test_name + ".pdf", "application/pdf");
-
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
@@ -147,7 +173,7 @@
 
 	async function runCompile() {
 		const begin = performance.now();
-		await Typst.mapShadow("/main.typ", new TextEncoder().encode(template_body));
+		await mapShadow("/main.typ", new TextEncoder().encode(template_body));
 		const svg = await Typst.svg({
 			mainFilePath: "/main.typ",
 		});
@@ -184,16 +210,19 @@
 	on:click={async () =>
 		on_answer_position_update(
 			JSON.stringify(
-				(await Typst.getCompiler().then(async (compiler) =>
-					compiler.query({
-						mainFilePath: "/main.typ",
-						selector: "<box_positions>",
-						field: "value",
-					})
-				))[0]
+				(
+					await Typst.getCompiler().then(async (compiler) =>
+						compiler.query({
+							mainFilePath: "/main.typ",
+							selector: "<box_positions>",
+							field: "value",
+						})
+					)
+				)[0]
 			)
 		)}>Save Answer Positions</button
 >
+<button on:click={downloadZIP}> Download ZIP </button>
 
 <div style="display: flex; justify-content: center;">
 	<div style="display: grid; grid-template-columns: auto auto;">
