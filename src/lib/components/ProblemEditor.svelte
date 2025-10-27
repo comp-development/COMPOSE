@@ -782,20 +782,7 @@
 			<br />
 			<br />
 			{#if onSubmit}
-				<Button
-					kind="tertiary"
-					class="button"
-					type="submit"
-					size="small"
-					disabled={isDisabled || problemFailed}
-					on:click={() => {
-						submitPayload();
-					}}
-					style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0;"
-				>
-					<p>Submit Problem</p>
-				</Button><br /><br />
-				{#if !originalProblem || originalProblem?.status == "Draft"}
+				<div style="display: flex; flex-direction: column; align-items: center;">
 					<Button
 						kind="tertiary"
 						class="button"
@@ -803,13 +790,32 @@
 						size="small"
 						disabled={isDisabled || problemFailed}
 						on:click={() => {
-							submitPayload(true);
+							submitPayload();
 						}}
-						style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0;"
+						style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0; text-align: center;"
 					>
-						<p>Save Draft</p>
-					</Button>
-				{/if}
+						<p style="text-align: center; width: 100%; margin: 0; {$user?.id === 'c0cffc8a-6fc7-4cd5-99f5-ce7f081382a9' ? 'transform: rotate(180deg);' : ''} display: inline-block;">Submit Problem</p>
+					</Button><br /><br />
+					{#if !originalProblem || originalProblem?.status == "Draft"}
+						<Button
+							kind="tertiary"
+							class="button"
+							type="submit"
+							size="small"
+							disabled={isDisabled || problemFailed}
+							on:click={() => {
+								submitPayload(true);
+							}}
+							style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0; text-align: center;"
+						>
+							<p
+								style="text-align: center; width: 100%; margin: 0; {$user?.id === 'c0cffc8a-6fc7-4cd5-99f5-ce7f081382a9' ? 'transform: rotate(180deg);' : ''} display: inline-block;"
+							>
+								Save Draft
+							</p>
+						</Button>
+					{/if}
+				</div>
 				<p>{submittedText}</p>
 				<br />
 			{/if}
