@@ -484,7 +484,7 @@
 				fields.problem.length > 0 &&
 				fields.answer.length > 0 &&
 				fields.solution.length > 0 &&
-				topics
+				topics.length > 0
 			) {
 				if (problemFiles.length > fileUploadLimit) {
 					throw new Error("Too many files uploaded");
