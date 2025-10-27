@@ -66,6 +66,25 @@
 
 	let problems = [];
 
+	// Filter problems based on selected topics
+	$: {
+		if (problems && problems.length > 0) {
+			if (selectedTopics.length === 0) {
+				filteredProblems = problems;
+			} else {
+				filteredProblems = problems.filter(problem => {
+					if (!problem.topics || problem.topics.trim() === "") return false;
+					const problemTopics = problem.topics.split(", ").map(topic => topic.trim());
+					return selectedTopics.some(selectedTopic => 
+						problemTopics.includes(selectedTopic)
+					);
+				});
+			}
+		} else {
+			filteredProblems = [];
+		}
+	}
+
 	let time_filtered_problems = [];
 	let problemCounts = [];
 	let width = 0;
@@ -78,6 +97,11 @@
 	let group = values.slice(0, 1);
 
 	let scheme = {};
+
+	// Topic filtering state
+	let selectedTopics = [];
+	let availableTopics = ["Algebra", "Calculus", "Combinatorics", "Number Theory", "Geometry"];
+	let filteredProblems = [];
 
 	onMount(async () => {
 		// Fetch settings from the database
@@ -370,10 +394,14 @@
 <br />
 <div style="width:80%; margin: auto;margin-bottom: 20px;">
 	<ProblemList
-		{problems}
+		problems={filteredProblems}
 		showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}
 		sortKey={"feedback_status"}
 		sortDirection={"ascending"}
+		{selectedTopics}
+		{availableTopics}
+		onTopicFilterChange={(topics) => selectedTopics = topics}
+		filteredCount={filteredProblems.length}
 	/>
 </div>
 
