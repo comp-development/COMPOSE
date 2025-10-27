@@ -36,6 +36,10 @@
 	export let minWidth = 100;
 
 	export let showList = null;
+	export let selectedTopics = [];
+	export let availableTopics = [];
+	export let onTopicFilterChange = () => {};
+	export let filteredCount = 0;
 
 	// If showList is passed as null by the parent page, then we want to override
 	// with this default list.
@@ -269,7 +273,7 @@
 </script>
 
 <svelte:window />
-<div bind:clientWidth={width} class="align-items: right; display: flex;">
+<div bind:clientWidth={width} class="filter-controls">
 	<MultiSelect
 		bind:selectedIds={showList}
 		on:select={({ detail }) => {
@@ -336,6 +340,26 @@
 			},
 		]}
 	/>
+	
+	{#if availableTopics && availableTopics.length > 0}
+		<MultiSelect
+			bind:selectedIds={selectedTopics}
+			on:select={({ detail }) => {
+				selectedTopics = detail.selectedIds;
+				onTopicFilterChange(selectedTopics);
+			}}
+			direction="top"
+			size="sm"
+			label="Filter by topics"
+			items={availableTopics.map(topic => ({
+				id: topic,
+				text: topic
+			}))}
+		/>
+		<span class="filter-count">
+			{filteredCount} problem{filteredCount !== 1 ? 's' : ''} found
+		</span>
+	{/if}
 </div>
 
 <div
@@ -564,5 +588,19 @@
 
 	:global(.bx--list-box__field:focus) {
 		outline-color: var(--primary);
+	}
+
+	.filter-controls {
+		display: flex;
+		align-items: center;
+		gap: 15px;
+		flex-wrap: wrap;
+		margin-bottom: 10px;
+	}
+
+	.filter-count {
+		color: #666;
+		font-size: 14px;
+		white-space: nowrap;
 	}
 </style>
