@@ -782,7 +782,9 @@
 			<br />
 			<br />
 			{#if onSubmit}
-				<div style="display: flex; flex-direction: column; align-items: center;">
+				<div
+					style="display: flex; flex-direction: column; align-items: center;"
+				>
 					<Button
 						kind="tertiary"
 						class="button"
@@ -794,7 +796,14 @@
 						}}
 						style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0; text-align: center;"
 					>
-						<p style="text-align: center; width: 100%; margin: 0; {$user?.id === 'c0cffc8a-6fc7-4cd5-99f5-ce7f081382a9' ? 'transform: rotate(180deg);' : ''} display: inline-block;">Submit Problem</p>
+						<p
+							style="text-align: center; width: 100%; margin: 0; {$user?.id ===
+							'c0cffc8a-6fc7-4cd5-99f5-ce7f081382a9'
+								? 'transform: rotate(180deg);'
+								: ''} display: inline-block;"
+						>
+							Submit Problem
+						</p>
 					</Button><br /><br />
 					{#if !originalProblem || originalProblem?.status == "Draft"}
 						<Button
@@ -809,7 +818,10 @@
 							style="width: 30em; border-radius: 2.5em; margin: 0; padding: 0; text-align: center;"
 						>
 							<p
-								style="text-align: center; width: 100%; margin: 0; {$user?.id === 'c0cffc8a-6fc7-4cd5-99f5-ce7f081382a9' ? 'transform: rotate(180deg);' : ''} display: inline-block;"
+								style="text-align: center; width: 100%; margin: 0; {$user?.id ===
+								'c0cffc8a-6fc7-4cd5-99f5-ce7f081382a9'
+									? 'transform: rotate(180deg);'
+									: ''} display: inline-block;"
 							>
 								Save Draft
 							</p>
