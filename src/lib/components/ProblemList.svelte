@@ -349,20 +349,22 @@
 	/>
 	
 	{#if availableTopics && availableTopics.length > 0}
-		<MultiSelect
-			bind:selectedIds={selectedTopics}
-			on:select={({ detail }) => {
-				selectedTopics = detail.selectedIds;
-				onTopicFilterChange(selectedTopics);
-			}}
-			direction="top"
-			size="sm"
-			label="Filter by topics"
-			items={availableTopics.map(topic => ({
-				id: topic,
-				text: topic
-			}))}
-		/>
+		<div style="min-width: 200px;">
+			<MultiSelect
+				bind:selectedIds={selectedTopics}
+				on:select={({ detail }) => {
+					selectedTopics = detail.selectedIds;
+					onTopicFilterChange(selectedTopics);
+				}}
+				direction="top"
+				size="sm"
+				label="Filter by topics"
+				items={availableTopics.map(topic => ({
+					id: topic,
+					text: topic
+				}))}
+			/>
+		</div>
 	{/if}
 
 	{#if availableStages && availableStages.length > 0}

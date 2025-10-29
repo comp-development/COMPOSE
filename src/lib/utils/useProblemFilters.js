@@ -1,17 +1,14 @@
 import { writable, derived } from 'svelte/store';
 
 export function useProblemFilters(problemsStore) {
-	// Filter state
 	const selectedTopics = writable([]);
 	const selectedStages = writable([]);
 	const selectedEndorsed = writable([]);
 
-	// Available options
 	const availableTopics = ["Algebra", "Calculus", "Combinatorics", "Number Theory", "Geometry"];
 	const availableStages = ["Draft", "Idea", "Endorsed", "On Test", "Published", "Archived"];
 	const availableEndorsed = ["Yes", "No"];
 
-	// Derived filtered problems
 	const filteredProblems = derived(
 		[problemsStore, selectedTopics, selectedStages, selectedEndorsed],
 		([$problems, $selectedTopics, $selectedStages, $selectedEndorsed]) => {
@@ -19,7 +16,6 @@ export function useProblemFilters(problemsStore) {
 
 			let filtered = $problems;
 
-			// Topic filtering
 			if ($selectedTopics.length > 0) {
 				filtered = filtered.filter(problem => {
 					if (!problem.topics || problem.topics.trim() === "") return false;
@@ -30,14 +26,12 @@ export function useProblemFilters(problemsStore) {
 				});
 			}
 
-			// Stage filtering
 			if ($selectedStages.length > 0) {
 				filtered = filtered.filter(problem => {
 					return $selectedStages.includes(problem.status);
 				});
 			}
 
-			// Endorsed filtering
 			if ($selectedEndorsed.length > 0) {
 				filtered = filtered.filter(problem => {
 					const isEndorsed = problem.endorsed && problem.endorsed.trim() !== "";
@@ -55,10 +49,8 @@ export function useProblemFilters(problemsStore) {
 		}
 	);
 
-	// Derived filtered count
 	const filteredCount = derived(filteredProblems, $filteredProblems => $filteredProblems.length);
 
-	// Clear all filters function
 	function clearAllFilters() {
 		selectedTopics.set([]);
 		selectedStages.set([]);
@@ -66,19 +58,16 @@ export function useProblemFilters(problemsStore) {
 	}
 
 	return {
-		// State
 		selectedTopics,
 		selectedStages,
 		selectedEndorsed,
 		filteredProblems,
 		filteredCount,
 		
-		// Options
 		availableTopics,
 		availableStages,
 		availableEndorsed,
 		
-		// Actions
 		clearAllFilters
 	};
 }
