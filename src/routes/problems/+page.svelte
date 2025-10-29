@@ -1,7 +1,7 @@
 <script lang="js">
 	import { useChat } from "ai/svelte";
 	import { supabase } from "$lib/supabaseClient";
-	import { get } from "svelte/store";
+	import { get, writable } from "svelte/store";
 	import { problemList } from "$lib/sessionStore.js";
 	import ProblemList from "$lib/components/ProblemList.svelte";
 	import ProgressBar from "$lib/components/ProgressBar.svelte";
@@ -14,6 +14,7 @@
 	import { Chart, registerables } from 'chart.js';
 	import annotationPlugin from 'chartjs-plugin-annotation';
 	import { LightenDarkenColor } from "$lib/utils/Colors.svelte";
+	import { useProblemFilters } from "$lib/utils/useProblemFilters.js";
 
 	import {
 		getImages,
@@ -108,10 +109,23 @@
 
 	let scheme = {};
 
-	// Topic filtering state
-	let selectedTopics = [];
-	let availableTopics = ["Algebra", "Calculus", "Combinatorics", "Number Theory", "Geometry"];
-	let filteredProblems = [];
+	let problemsStore = writable([]);
+	
+	const {
+		selectedTopics,
+		selectedStages,
+		selectedEndorsed,
+		filteredProblems,
+		filteredCount,
+		availableTopics,
+		availableStages,
+		availableEndorsed,
+		clearAllFilters
+	} = useProblemFilters(problemsStore);
+
+	$: if (problems) {
+		problemsStore.set(problems);
+	}
 
 	onMount(async () => {
 		// Fetch settings from the database
@@ -333,7 +347,7 @@
 	}
 	function resetProblems() {
 		problemList.set([...all_problems]);
-		selectedTopics = [];
+		clearAllFilters();
 	}
 
 
@@ -584,12 +598,18 @@
 
 <div style="width:80%; margin: auto;margin-bottom: 20px;">
 	<ProblemList 
-		problems={filteredProblems} 
+		problems={$filteredProblems} 
 		showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}
-		{selectedTopics}
+		selectedTopics={$selectedTopics}
 		{availableTopics}
-		onTopicFilterChange={(topics) => selectedTopics = topics}
-		filteredCount={filteredProblems.length}
+		onTopicFilterChange={(topics) => { selectedTopics.set(topics); }}
+		selectedStages={$selectedStages}
+		{availableStages}
+		onStageFilterChange={(stages) => { selectedStages.set(stages); }}
+		selectedEndorsed={$selectedEndorsed}
+		{availableEndorsed}
+		onEndorsedFilterChange={(endorsed) => { selectedEndorsed.set(endorsed); }}
+		filteredCount={$filteredCount}
 	/>
 </div>
 

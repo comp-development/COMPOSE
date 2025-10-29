@@ -11,6 +11,8 @@
 		getThisUserRole,
 	} from "$lib/supabase";
 	import { Download } from "carbon-icons-svelte";
+	import { useProblemFilters } from "$lib/utils/useProblemFilters.js";
+	import { writable } from "svelte/store";
 
 	let testId = Number($page.params.id);
 	let test;
@@ -20,28 +22,22 @@
 	let problems = [];
 	let userIsTestCoordinator = false;
 
-	// Topic filtering state
-	let selectedTopics = [];
-	let availableTopics = ["Algebra", "Calculus", "Combinatorics", "Number Theory", "Geometry"];
-	let filteredProblems = [];
+	let problemsStore = writable([]);
+	
+	const {
+		selectedTopics,
+		selectedStages,
+		selectedEndorsed,
+		filteredProblems,
+		filteredCount,
+		availableTopics,
+		availableStages,
+		availableEndorsed,
+		clearAllFilters
+	} = useProblemFilters(problemsStore);
 
-	// Filter problems based on selected topics
-	$: {
-		if (problems && problems.length > 0) {
-			if (selectedTopics.length === 0) {
-				filteredProblems = problems;
-			} else {
-				filteredProblems = problems.filter(problem => {
-					if (!problem.topics || problem.topics.trim() === "") return false;
-					const problemTopics = problem.topics.split(", ").map(topic => topic.trim());
-					return selectedTopics.some(selectedTopic => 
-						problemTopics.includes(selectedTopic)
-					);
-				});
-			}
-		} else {
-			filteredProblems = [];
-		}
+	$: if (problems) {
+		problemsStore.set(problems);
 	}
 
 	async function getTest() {
@@ -284,7 +280,7 @@
 		{:else}
 			<div style="width: 90%; margin: auto; padding: 20px;">
 				<ProblemList
-					problems={filteredProblems}
+					problems={$filteredProblems}
 					showList={JSON.parse(localStorage.getItem("problem-list.show-list")) ?? [
 						"full_name",
 						"topics_short",
@@ -299,10 +295,16 @@
 						{ key: "problem_number", value: "", icon: "ri-hashtag" },
 						{ key: "endorse_link", value: "Endorse" },
 					]}
-					{selectedTopics}
+					selectedTopics={$selectedTopics}
 					{availableTopics}
-					onTopicFilterChange={(topics) => selectedTopics = topics}
-					filteredCount={filteredProblems.length}
+					onTopicFilterChange={(topics) => { selectedTopics.set(topics); }}
+					selectedStages={$selectedStages}
+					{availableStages}
+					onStageFilterChange={(stages) => { selectedStages.set(stages); }}
+					selectedEndorsed={$selectedEndorsed}
+					{availableEndorsed}
+					onEndorsedFilterChange={(endorsed) => { selectedEndorsed.set(endorsed); }}
+					filteredCount={$filteredCount}
 				/>
 			</div>
 		{/if}
