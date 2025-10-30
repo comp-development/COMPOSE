@@ -67,24 +67,9 @@
 
 	let problems = [];
 
-	// Filter problems based on selected topics
-	$: {
-		if (problems && problems.length > 0) {
-			if (selectedTopics.length === 0) {
-				filteredProblems = problems;
-			} else {
-				filteredProblems = problems.filter(problem => {
-					if (!problem.topics || problem.topics.trim() === "") return false;
-					const problemTopics = problem.topics.split(", ").map(topic => topic.trim());
-					return selectedTopics.some(selectedTopic => 
-						problemTopics.includes(selectedTopic)
-					);
-				});
-			}
-		} else {
-			filteredProblems = [];
-		}
-	}
+	problemList.subscribe((value) => {
+		problems = value;
+	});
 
 	let time_filtered_problems = [];
 	let problemCounts = [];
