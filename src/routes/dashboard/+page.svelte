@@ -67,10 +67,6 @@
 
 	let problems = [];
 
-	problemList.subscribe((value) => {
-		problems = value;
-	});
-
 	let time_filtered_problems = [];
 	let problemCounts = [];
 	let width = 0;
