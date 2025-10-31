@@ -11,6 +11,8 @@
 		getThisUserRole,
 	} from "$lib/supabase";
 	import { Download } from "carbon-icons-svelte";
+	import { useProblemFilters } from "$lib/utils/useProblemFilters.js";
+	import { writable } from "svelte/store";
 
 	let testId = Number($page.params.id);
 	let test;
@@ -19,6 +21,24 @@
 	let loadingProblems = true;
 	let problems = [];
 	let userIsTestCoordinator = false;
+
+	let problemsStore = writable([]);
+	
+	const {
+		selectedTopics,
+		selectedStages,
+		selectedEndorsed,
+		filteredProblems,
+		filteredCount,
+		availableTopics,
+		availableStages,
+		availableEndorsed,
+		clearAllFilters
+	} = useProblemFilters(problemsStore);
+
+	$: if (problems) {
+		problemsStore.set(problems);
+	}
 
 	async function getTest() {
 		try {
@@ -260,7 +280,7 @@
 		{:else}
 			<div style="width: 90%; margin: auto; padding: 20px;">
 				<ProblemList
-					{problems}
+					problems={$filteredProblems}
 					showList={JSON.parse(localStorage.getItem("problem-list.show-list")) ?? [
 						"full_name",
 						"topics_short",
@@ -275,6 +295,16 @@
 						{ key: "problem_number", value: "", icon: "ri-hashtag" },
 						{ key: "endorse_link", value: "Endorse" },
 					]}
+					selectedTopics={$selectedTopics}
+					{availableTopics}
+					onTopicFilterChange={(topics) => { selectedTopics.set(topics); }}
+					selectedStages={$selectedStages}
+					{availableStages}
+					onStageFilterChange={(stages) => { selectedStages.set(stages); }}
+					selectedEndorsed={$selectedEndorsed}
+					{availableEndorsed}
+					onEndorsedFilterChange={(endorsed) => { selectedEndorsed.set(endorsed); }}
+					filteredCount={$filteredCount}
 				/>
 			</div>
 		{/if}

@@ -37,6 +37,17 @@
 
 	export let showList = null;
 
+	export let selectedTopics = [];
+	export let availableTopics = [];
+	export let onTopicFilterChange = () => {};
+	export let filteredCount = 0;
+	export let selectedStages = [];
+	export let availableStages = [];
+	export let onStageFilterChange = () => {};
+	export let selectedEndorsed = [];
+	export let availableEndorsed = [];
+	export let onEndorsedFilterChange = () => {};
+
 	// If showList is passed as null by the parent page, then we want to override
 	// with this default list.
 	if (!showList) {
@@ -269,7 +280,7 @@
 </script>
 
 <svelte:window />
-<div bind:clientWidth={width} class="align-items: right; display: flex;">
+<div bind:clientWidth={width} class="filter-controls">
 	<MultiSelect
 		bind:selectedIds={showList}
 		on:select={({ detail }) => {
@@ -336,6 +347,63 @@
 			},
 		]}
 	/>
+	
+	{#if availableTopics && availableTopics.length > 0}
+		<div style="min-width: 200px;">
+			<MultiSelect
+				bind:selectedIds={selectedTopics}
+				on:select={({ detail }) => {
+					selectedTopics = detail.selectedIds;
+					onTopicFilterChange(selectedTopics);
+				}}
+				direction="top"
+				size="sm"
+				label="Filter by topics"
+				items={availableTopics.map(topic => ({
+					id: topic,
+					text: topic
+				}))}
+			/>
+		</div>
+	{/if}
+
+	{#if availableStages && availableStages.length > 0}
+		<MultiSelect
+			bind:selectedIds={selectedStages}
+			on:select={({ detail }) => {
+				selectedStages = detail.selectedIds;
+				onStageFilterChange(selectedStages);
+			}}
+			direction="top"
+			size="sm"
+			label="Filter by stage"
+			items={availableStages.map(stage => ({
+				id: stage,
+				text: stage
+			}))}
+		/>
+	{/if}
+
+	{#if availableEndorsed && availableEndorsed.length > 0}
+		<MultiSelect
+			bind:selectedIds={selectedEndorsed}
+			on:select={({ detail }) => {
+				selectedEndorsed = detail.selectedIds;
+				onEndorsedFilterChange(selectedEndorsed);
+			}}
+			direction="top"
+			size="sm"
+			label="Filter by endorsed"
+			items={availableEndorsed.map(endorsed => ({
+				id: endorsed,
+				text: endorsed
+			}))}
+		/>
+	{/if}
+
+	<span class="filter-count">
+		{filteredCount} problem{filteredCount !== 1 ? 's' : ''} found
+	</span>
 </div>
 
 <div
@@ -564,5 +632,19 @@
 
 	:global(.bx--list-box__field:focus) {
 		outline-color: var(--primary);
+	}
+
+	.filter-controls {
+		display: flex;
+		align-items: center;
+		gap: 15px;
+		flex-wrap: wrap;
+		margin-bottom: 10px;
+	}
+
+	.filter-count {
+		color: #666;
+		font-size: 14px;
+		white-space: nowrap;
 	}
 </style>

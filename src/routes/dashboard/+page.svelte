@@ -1,7 +1,7 @@
 <script lang="js">
 	import { useChat } from "ai/svelte";
 	import { supabase } from "$lib/supabaseClient";
-	import { get } from "svelte/store";
+	import { get, writable } from "svelte/store";
 	import ProblemList from "$lib/components/ProblemList.svelte";
 	import ProgressBar from "$lib/components/ProgressBar.svelte";
 	import Button from "$lib/components/Button.svelte";
@@ -10,6 +10,7 @@
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError";
 	import { fetchSettings } from "$lib/supabase/settings";
+	import { useProblemFilters } from "$lib/utils/useProblemFilters.js";
 	import {
 		getImages,
 		getProblemCounts,
@@ -78,6 +79,24 @@
 	let group = values.slice(0, 1);
 
 	let scheme = {};
+
+	let problemsStore = writable([]);
+	
+	const {
+		selectedTopics,
+		selectedStages,
+		selectedEndorsed,
+		filteredProblems,
+		filteredCount,
+		availableTopics,
+		availableStages,
+		availableEndorsed,
+		clearAllFilters
+	} = useProblemFilters(problemsStore);
+
+	$: if (problems) {
+		problemsStore.set(problems);
+	}
 
 	onMount(async () => {
 		// Fetch settings from the database
@@ -370,10 +389,20 @@
 <br />
 <div style="width:80%; margin: auto;margin-bottom: 20px;">
 	<ProblemList
-		{problems}
+		problems={$filteredProblems}
 		showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}
 		sortKey={"feedback_status"}
 		sortDirection={"ascending"}
+		selectedTopics={$selectedTopics}
+		{availableTopics}
+		onTopicFilterChange={(topics) => { selectedTopics.set(topics); }}
+		selectedStages={$selectedStages}
+		{availableStages}
+		onStageFilterChange={(stages) => { selectedStages.set(stages); }}
+		selectedEndorsed={$selectedEndorsed}
+		{availableEndorsed}
+		onEndorsedFilterChange={(endorsed) => { selectedEndorsed.set(endorsed); }}
+		filteredCount={$filteredCount}
 	/>
 </div>
 
