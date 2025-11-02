@@ -207,7 +207,7 @@
 		}
 	}
 
-	function cancelEdit() {
+	function resetEdit() {
 		editingFeedbackId = null;
 		editModalOpen = false;
 		editingProblem = null;
@@ -250,7 +250,7 @@
 
 			await updateProblemFeedback(editingFeedbackId, newFeedback, currentUserId);
 			toast.success("Feedback updated successfully");
-			cancelEdit();
+			resetEdit();
 			loadFeedback();
 		} catch (error) {
 			handleError(error);
@@ -458,7 +458,7 @@
 	hasForm
 	on:click:button--secondary={(e) => {
 		e.preventDefault();
-		cancelEdit();
+		resetEdit();
 	}}
 	on:submit={(e) => {
 		e.preventDefault();
