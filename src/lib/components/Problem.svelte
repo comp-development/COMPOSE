@@ -40,6 +40,8 @@
 	let fieldList = ["problem", "comment", "answer", "solution"];
 	let errorList = [];
 
+	let reveal = false;
+
 	async function loadProblem() {
 		try {
 			failed = false;
@@ -126,10 +128,28 @@
 		>
 			<p class="header">Problem</p>
 			<p id="problem-render">{@html latexes.problem}</p>
-			<p class="header">Answer</p>
-			<p id="answer-render">{@html latexes.answer}</p>
-			<p class="header">Solution</p>
-			<p id="solution-render">{@html latexes.solution}</p>
+			<div class="spoiler-section">
+				<div class="spoiler-header">
+					<p class="header">Answer</p>
+					<button
+						class="reveal-button"
+						on:click={() => (reveal = !reveal)}
+					>
+						{reveal ? "Hide" : "Reveal"}
+					</button>
+				</div>
+				<div class="spoiler-content" class:revealed={reveal}>
+					<p id="answer-render">{@html latexes.answer}</p>
+				</div>
+			</div>
+			<div class="spoiler-section">
+				<div class="spoiler-header">
+					<p class="header">Solution</p>
+				</div>
+				<div class="spoiler-content" class:revealed={reveal}>
+					<p id="solution-render">{@html latexes.solution}</p>
+				</div>
+			</div>
 			<br />
 			<p>
 				<span class="header">Comments:</span>
@@ -148,5 +168,50 @@
 
 	#comment-render {
 		font-style: italic;
+	}
+
+	.spoiler-section {
+		margin: 10px 0;
+	}
+
+	.spoiler-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.reveal-button {
+		padding: 5px 15px;
+		cursor: pointer;
+		background-color: #4a5568;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		font-size: 0.9em;
+		transition: background-color 0.2s;
+	}
+
+	.reveal-button:hover {
+		background-color: #2d3748;
+	}
+
+	.spoiler-content {
+		position: relative;
+		user-select: none;
+		transition: filter 0.3s, opacity 0.3s;
+	}
+
+	.spoiler-content:not(.revealed) {
+		filter: blur(8px);
+		opacity: 0.3;
+		pointer-events: none;
+	}
+
+	.spoiler-content.revealed {
+		filter: blur(0);
+		opacity: 1;
+		user-select: auto;
+		pointer-events: auto;
 	}
 </style>
