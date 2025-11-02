@@ -727,6 +727,39 @@ export async function updateTestsolveAnswer(
 }
 
 /**
+ * Update problem feedback with ownership validation
+ * Only the creator of the feedback can update it
+ *
+ * @param feedbackId number
+ * @param newFeedback any
+ * @param userId string - the user attempting to update
+ */
+export async function updateProblemFeedback(
+	feedbackId: number,
+	newFeedback: any,
+	userId: string
+) {
+	const { data: feedback, error: fetchError } = await supabase
+		.from("problem_feedback")
+		.select("solver_id")
+		.eq("id", feedbackId)
+		.single();
+	
+	if (fetchError) throw fetchError;
+	if (!feedback) throw new Error("Feedback not found");
+	if (feedback.solver_id !== userId) {
+		throw new Error("You can only edit feedback that you created");
+	}
+
+	const { error: updateError } = await supabase
+		.from("problem_feedback")
+		.update(newFeedback)
+		.eq("id", feedbackId);
+	
+	if (updateError) throw updateError;
+}
+
+/**
  * Delete a problem's testsolve answers
  *
  * @param testsolveId number

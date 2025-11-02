@@ -1,6 +1,6 @@
 <script>
 	import Rating from "$lib/components/Rating.svelte";
-	import { Checkbox } from "carbon-components-svelte";
+	import { Checkbox, Modal } from "carbon-components-svelte";
 	import {
 		DataTable,
 		Toolbar,
@@ -14,12 +14,16 @@
 		MultiSelect,
 	} from "carbon-components-svelte";
 	import Button from "$lib/components/Button.svelte";
+	import Latex from "$lib/components/Latex.svelte";
 	import toast from "svelte-french-toast";
 	import { handleError } from "$lib/handleError.ts";
 	import {
 		addProblemFeedback,
 		getProblemFeedback,
 		updateTestsolveAnswer,
+		updateProblemFeedback,
+		getThisUser,
+		getProblem,
 	} from "$lib/supabase";
 	import Error from "../../routes/+error.svelte";
 
@@ -35,6 +39,15 @@
 	let qualityAverage = null;
 	let pageSize = 25;
 	let page = 1;
+	let currentUserId = null;
+	let editingFeedbackId = null;
+	let editModalOpen = false;
+	let editingProblem = null;
+	let editFeedback = "";
+	let editAnswer = "";
+	let editDifficulty = "";
+	let editQuality = "";
+	let editCorrect = false;
 
 	let feedback = "";
 	let answer = "";
@@ -56,6 +69,15 @@
 
 	async function loadFeedback() {
 		try {
+			if (!currentUserId) {
+				try {
+					const user = await getThisUser();
+					currentUserId = user?.id || null;
+				} catch (error) {
+					console.error("Error getting current user:", error);
+				}
+			}
+
 			const data = await getProblemFeedback(problem_id, "*,users(*)");
 
 			// filter empty feedback
@@ -69,9 +91,11 @@
 				ratings: { difficulty: e.difficulty, quality: e.quality },
 				difficulty: e.difficulty,
 				quality: e.quality,
+				correct: e.correct || false,
 				user: e.users ? e.users.full_name : "N/A",
 				user_discord: e.users ? e.users.discord : "N/A",
 				user_id: e.users ? e.users.id : "N/A",
+				solver_id: e.solver_id,
 				user_math_background: e.users ? e.users.math_comp_background : "N/A",
 				// edits: e.edits ?? "N/A" 
 			}));
@@ -161,6 +185,73 @@
 				resolved: e.detail,
 			};
 			await updateTestsolveAnswer(feedback_id, newFeedback);
+		} catch (error) {
+			handleError(error);
+			toast.error(error.message);
+		}
+	}
+
+	async function startEditFeedback(feedbackItem) {
+		try {
+			editingFeedbackId = feedbackItem.id;
+			editFeedback = feedbackItem.feedback || "";
+			editAnswer = feedbackItem.answer || "";
+			editDifficulty = feedbackItem.difficulty ? feedbackItem.difficulty.toString() : "";
+			editQuality = feedbackItem.quality ? feedbackItem.quality.toString() : "";
+			editCorrect = feedbackItem.correct === true;
+			editingProblem = await getProblem(problem_id);
+			editModalOpen = true;
+		} catch (error) {
+			handleError(error);
+			toast.error(error.message);
+		}
+	}
+
+	function cancelEdit() {
+		editingFeedbackId = null;
+		editModalOpen = false;
+		editingProblem = null;
+		editFeedback = "";
+		editAnswer = "";
+		editDifficulty = "";
+		editQuality = "";
+		editCorrect = false;
+	}
+
+	async function saveEditedFeedback() {
+		try {
+			if (!currentUserId) {
+				throw new Error("You must be logged in to edit feedback");
+			}
+
+			if (editFeedback == "" && editAnswer == "" && editQuality == "" && editDifficulty == "") {
+				throw new Error("You must provide some feedback!");
+			}
+
+			const feedbackToSave = editFeedback == "" ? null : editFeedback;
+			const qualityToSave = editQuality == "" ? null : parseInt(editQuality);
+			const difficultyToSave = editDifficulty == "" ? null : parseInt(editDifficulty);
+			const answerToSave = editAnswer == "" ? null : editAnswer;
+
+			if (difficultyToSave !== null && (difficultyToSave < 1 || difficultyToSave > 10)) {
+				throw new Error("Difficulty must be between 1 and 10");
+			}
+			if (qualityToSave !== null && (qualityToSave < 1 || qualityToSave > 10)) {
+				throw new Error("Quality must be between 1 and 10");
+			}
+
+			const newFeedback = {
+				feedback: feedbackToSave,
+				answer: answerToSave,
+				quality: qualityToSave,
+				difficulty: difficultyToSave,
+				correct: editCorrect,
+			};
+
+			await updateProblemFeedback(editingFeedbackId, newFeedback, currentUserId);
+			toast.success("Feedback updated successfully");
+			cancelEdit();
+			loadFeedback();
 		} catch (error) {
 			handleError(error);
 			toast.error(error.message);
@@ -290,11 +381,12 @@
 					sortable
 					size="compact"
 					headers={[
-						{ key: "user", value: "User", width: "15%" },
-						{ key: "feedback", value: "Feedback", width: "50%" },
+						{ key: "user", value: "User", width: "12%" },
+						{ key: "feedback", value: "Feedback", width: "45%" },
 						{ key: "answer", value: "Answer", width: "10%" },
-						{ key: "ratings", value: "Ratings", width: "15%" },
-						{ key: "resolved", value: "Resolved", width: "10%" }
+						{ key: "ratings", value: "Ratings", width: "13%" },
+						{ key: "resolved", value: "Resolved", width: "10%" },
+						{ key: "actions", value: "Actions", width: "10%" }
 					]}
 					rows={feedbackList}
 					{pageSize}
@@ -328,6 +420,14 @@
 								</Rating>
 							{:else if cell.key == "difficulty" || cell.key == "quality"}
 								<Rating rating={cell.value / 2} size={15} count={true} />
+							{:else if cell.key == "actions"}
+								{#if currentUserId && row.solver_id === currentUserId}
+									<Button
+										action={() => startEditFeedback(row)}
+										title="Edit"
+										bwidth="100%"
+									/>
+								{/if}
 							{:else if cell.value == null}
 								<div style="overflow: hidden;">-</div>
 							{:else}
@@ -349,6 +449,92 @@
 		{/if}
 	</div>
 </div>
+
+<Modal
+	bind:open={editModalOpen}
+	modalHeading="Edit Feedback"
+	primaryButtonText="Save"
+	secondaryButtonText="Cancel"
+	hasForm
+	on:click:button--secondary={(e) => {
+		e.preventDefault();
+		cancelEdit();
+	}}
+	on:submit={(e) => {
+		e.preventDefault();
+		saveEditedFeedback();
+	}}
+>
+	{#if editingProblem}
+		<div class="edit-modal-container">
+			<div class="problem-div">
+				<p>
+					<span style="font-size: 30px;">
+						({editingProblem.front_id})
+					</span>
+				</p>
+				<div class="problem-latex">
+					<Latex 
+						style="font-size: 16px"
+						value={editingProblem.problem_latex}
+					/>
+				</div>
+				<div style="margin-top: 10px;">
+					Answer:
+					<Latex
+						style="font-size: 16px"
+						value={editingProblem.answer_latex}
+					/>
+				</div>
+				<div style="margin-top: 10px;">
+					Solution:
+					<Latex
+						style="font-size: 16px"
+						value={editingProblem.solution_latex}
+					/>
+				</div>
+			</div>
+			<div class="feedback-div">
+				<div style="margin-top: 10px;">
+					<TextInput
+						labelText="Your answer"
+						bind:value={editAnswer}
+					/>
+				</div>
+				<div style="margin-top: 10px;">
+					<Checkbox
+						labelText="Correct?"
+						bind:checked={editCorrect}
+					/>
+				</div>
+				<br>
+				<div>
+					<TextArea
+						labelText="Feedback"
+						bind:value={editFeedback}
+					/>
+				</div>
+				<br />
+				<div class="flex">
+					<div style="margin: 3px">
+						<TextInput
+							labelText={"Difficulty"}
+							placeholder={"1-10"}
+							bind:value={editDifficulty}
+						/>
+					</div>
+					<div style="margin: 3px">
+						<TextInput
+							labelText={"Quality"}
+							placeholder={"1-10"}
+							bind:value={editQuality}
+						/>
+					</div>
+				</div>
+			</div>
+		</div>
+	{/if}
+</Modal>
 <br />
 
 <style>
@@ -376,13 +562,41 @@
 		width: 100%;
 	}
 
-	.input-row {
-		display: flex;
-		gap: 10px;
-		margin-bottom: 10px;
-	}
-
 	.feedback-container {
 		margin-bottom: 20px;
+	}
+
+	:global(.bx--modal-container) {
+		width: 90% !important;
+		max-width: 1200px !important;
+	}
+
+	.edit-modal-container {
+		display: flex;
+		width: 100%;
+		min-height: 400px;
+	}
+
+	.edit-modal-container .problem-div,
+	.edit-modal-container .feedback-div {
+		background-color: var(--text-color-light);
+		border: 2px solid black;
+		margin: 10px;
+		padding: 20px;
+		text-align: left;
+		flex-grow: 1;
+	}
+
+	.edit-modal-container .problem-div {
+		width: 60%;
+	}
+
+	.edit-modal-container .problem-latex {
+		margin: 10px;
+	}
+
+	.edit-modal-container .flex {
+		display: flex;
+		gap: 10px;
 	}
 </style>
