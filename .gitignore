@@ -6,6 +6,4 @@ node_modules
 .env
 .env.*
 !.env.example
-supabase/
-!src/lib/supabase/
 .vscode/
