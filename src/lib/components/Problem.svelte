@@ -112,6 +112,12 @@
 				{#if "status" in problem}
 					<p><span class="header">Status: </span>{problem.status}</p>
 				{/if}
+				{#if "endorsed" in problem}
+					<p>
+						<span class="header">Endorsed: </span>
+						{problem.endorsed && problem.endorsed.trim() !== "" ? problem.endorsed : "No"}
+					</p>
+				{/if}
 				{#if "difficulty" in problem}
 					<p><span class="header">Difficulty: </span>{problem.difficulty}</p>
 				{/if}
