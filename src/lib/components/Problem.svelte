@@ -10,6 +10,7 @@
 	export let showLatexErrors = false;
 	export let widthPara = 70;
 	export let failed = false; // if this problem failed to render (use as bind)
+	export let displaySolution = false; // if false, show answers and solutions without spoiler (always visible)
 
 	let loaded = false;
 
@@ -128,28 +129,39 @@
 		>
 			<p class="header">Problem</p>
 			<p id="problem-render">{@html latexes.problem}</p>
-			<div class="spoiler-section">
-				<div class="spoiler-header">
+			{#if displaySolution}
+				<div class="spoiler-section">
 					<p class="header">Answer</p>
-					<button
-						class="reveal-button"
-						on:click={() => (reveal = !reveal)}
-					>
-						{reveal ? "Hide" : "Reveal"}
-					</button>
-				</div>
-				<div class="spoiler-content" class:revealed={reveal}>
 					<p id="answer-render">{@html latexes.answer}</p>
 				</div>
-			</div>
-			<div class="spoiler-section">
-				<div class="spoiler-header">
+				<div class="spoiler-section">
 					<p class="header">Solution</p>
-				</div>
-				<div class="spoiler-content" class:revealed={reveal}>
 					<p id="solution-render">{@html latexes.solution}</p>
 				</div>
-			</div>
+			{:else}
+				<div class="spoiler-section">
+					<div class="spoiler-header">
+						<p class="header">Answer</p>
+						<button
+							class="reveal-button"
+							on:click={() => (reveal = !reveal)}
+						>
+							{reveal ? "Hide" : "Reveal"}
+						</button>
+					</div>
+					<div class="spoiler-content" class:revealed={reveal}>
+						<p id="answer-render">{@html latexes.answer}</p>
+					</div>
+				</div>
+				<div class="spoiler-section">
+					<div class="spoiler-header">
+						<p class="header">Solution</p>
+					</div>
+					<div class="spoiler-content" class:revealed={reveal}>
+						<p id="solution-render">{@html latexes.solution}</p>
+					</div>
+				</div>
+			{/if}
 			<br />
 			<p>
 				<span class="header">Comments:</span>

@@ -845,6 +845,7 @@
 					showLatexErrors={true}
 					widthPara={100}
 					bind:failed={problemFailed}
+					displaySolution={true}
 				/>
 			{/if}
 		</div>
