@@ -10,7 +10,7 @@
 	export let showLatexErrors = false;
 	export let widthPara = 70;
 	export let failed = false; // if this problem failed to render (use as bind)
-	export let displaySolution = false; // if false, show answers and solutions without spoiler (always visible)
+	export let displaySolution = false; // if true, show answers and solutions without spoiler (always visible)
 
 	let loaded = false;
 
