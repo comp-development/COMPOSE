@@ -1,13 +1,27 @@
 import { writable, derived } from 'svelte/store';
+import { getGlobalTopics } from '$lib/supabase/problems';
 
 export function useProblemFilters(problemsStore) {
 	const selectedTopics = writable([]);
 	const selectedStages = writable([]);
 	const selectedEndorsed = writable([]);
 
-	const availableTopics = ["Algebra", "Calculus", "Combinatorics", "Number Theory", "Geometry"];
+	const availableTopics = writable([]);
 	const availableStages = ["Draft", "Idea", "Endorsed", "On Test", "Published", "Archived"];
 	const availableEndorsed = ["Yes", "No"];
+
+	(async () => {
+		try {
+			const globalTopics = await getGlobalTopics("topic");
+			const topics = globalTopics
+				.map(t => t.topic)
+				.filter(topic => topic !== null && topic !== undefined && topic.trim() !== "");
+			availableTopics.set(topics);
+		} catch (error) {
+			console.error("Error fetching global topics:", error);
+			availableTopics.set([]);
+		}
+	})();
 
 	const filteredProblems = derived(
 		[problemsStore, selectedTopics, selectedStages, selectedEndorsed],

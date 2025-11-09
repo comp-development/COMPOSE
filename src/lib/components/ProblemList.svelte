@@ -68,13 +68,6 @@
 	$: maxCols = Math.floor((width - 100) / minWidth);
 	$: colWidth = (width - 100) / Math.min(maxCols, showList.length);
 
-	let mobileFriendly = {
-		Algebra: "Alg",
-		Mixed: "Mx",
-		"Number Theory": "NT",
-		Combination: "Comb",
-		Geometry: "Geo",
-	};
 
 	let pageSize = 25;
 	let page = 1;
