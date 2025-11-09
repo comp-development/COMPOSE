@@ -583,7 +583,7 @@
 		problems={$filteredProblems} 
 		showList={JSON.parse(localStorage.getItem("problem-list.show-list"))}
 		selectedTopics={$selectedTopics}
-		{availableTopics}
+		availableTopics={$availableTopics}
 		onTopicFilterChange={(topics) => { selectedTopics.set(topics); }}
 		selectedStages={$selectedStages}
 		{availableStages}

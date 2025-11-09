@@ -68,13 +68,6 @@
 	$: maxCols = Math.floor((width - 100) / minWidth);
 	$: colWidth = (width - 100) / Math.min(maxCols, showList.length);
 
-	let mobileFriendly = {
-		Algebra: "Alg",
-		Mixed: "Mx",
-		"Number Theory": "NT",
-		Combination: "Comb",
-		Geometry: "Geo",
-	};
 
 	let pageSize = 25;
 	let page = 1;
@@ -368,20 +361,22 @@
 	{/if}
 
 	{#if availableStages && availableStages.length > 0}
-		<MultiSelect
-			bind:selectedIds={selectedStages}
-			on:select={({ detail }) => {
-				selectedStages = detail.selectedIds;
-				onStageFilterChange(selectedStages);
-			}}
-			direction="top"
-			size="sm"
-			label="Filter by stage"
-			items={availableStages.map(stage => ({
-				id: stage,
-				text: stage
-			}))}
-		/>
+		<div style="min-width: 200px;">
+			<MultiSelect
+				bind:selectedIds={selectedStages}
+				on:select={({ detail }) => {
+					selectedStages = detail.selectedIds;
+					onStageFilterChange(selectedStages);
+				}}
+				direction="top"
+				size="sm"
+				label="Filter by stage"
+				items={availableStages.map(stage => ({
+					id: stage,
+					text: stage
+				}))}
+			/>
+		</div>
 	{/if}
 
 	{#if availableEndorsed && availableEndorsed.length > 0}
