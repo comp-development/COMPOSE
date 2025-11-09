@@ -296,7 +296,7 @@
 						{ key: "endorse_link", value: "Endorse" },
 					]}
 					selectedTopics={$selectedTopics}
-					{availableTopics}
+					availableTopics={$availableTopics}
 					onTopicFilterChange={(topics) => { selectedTopics.set(topics); }}
 					selectedStages={$selectedStages}
 					{availableStages}
