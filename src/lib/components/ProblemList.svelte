@@ -361,20 +361,22 @@
 	{/if}
 
 	{#if availableStages && availableStages.length > 0}
-		<MultiSelect
-			bind:selectedIds={selectedStages}
-			on:select={({ detail }) => {
-				selectedStages = detail.selectedIds;
-				onStageFilterChange(selectedStages);
-			}}
-			direction="top"
-			size="sm"
-			label="Filter by stage"
-			items={availableStages.map(stage => ({
-				id: stage,
-				text: stage
-			}))}
-		/>
+		<div style="min-width: 200px;">
+			<MultiSelect
+				bind:selectedIds={selectedStages}
+				on:select={({ detail }) => {
+					selectedStages = detail.selectedIds;
+					onStageFilterChange(selectedStages);
+				}}
+				direction="top"
+				size="sm"
+				label="Filter by stage"
+				items={availableStages.map(stage => ({
+					id: stage,
+					text: stage
+				}))}
+			/>
+		</div>
 	{/if}
 
 	{#if availableEndorsed && availableEndorsed.length > 0}
