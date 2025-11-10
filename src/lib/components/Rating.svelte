@@ -31,7 +31,7 @@
 		{#if count}
 			<svelte:component this={icon} fillPercent={100} {size} />
 			<p class="ms-2 text-sm font-bold text-gray-900 dark:text-white">
-				{rating.toFixed(round)}
+				{(2 * rating).toFixed(round)}
 			</p>
 			<slot />
 		{:else}
