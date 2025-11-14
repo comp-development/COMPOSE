@@ -394,7 +394,7 @@
 		sortKey={"feedback_status"}
 		sortDirection={"ascending"}
 		selectedTopics={$selectedTopics}
-		{availableTopics}
+		availableTopics={$availableTopics}
 		onTopicFilterChange={(topics) => { selectedTopics.set(topics); }}
 		selectedStages={$selectedStages}
 		{availableStages}
