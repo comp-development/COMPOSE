@@ -209,13 +209,13 @@
 	<div class="data-container">
 		<div class="ratings">
 			{#if loaded}
-				<Rating rating={difficultyAverage / 2} size={50} count={false}
+				<Rating rating={difficultyAverage} size={50} count={false}
 					><p slot="pretext">Average Difficulty:&nbsp</p>
 					<p slot="posttext">
 						&nbsp&nbsp{difficultyAverage}
 					</p></Rating
 				>
-				<Rating rating={qualityAverage / 2} size={50} count={false}
+				<Rating rating={qualityAverage} size={50} count={false}
 					><p slot="pretext">Average Quality:&nbsp</p>
 					<p slot="posttext">
 						&nbsp&nbsp{qualityAverage}
@@ -318,16 +318,16 @@
 								</p>
 							{:else if cell.key == "ratings"}
 								<Rating
-									rating={cell.value.difficulty / 2}
+									rating={cell.value.difficulty}
 									size={15}
 									count={true}
 									><p slot="pretext">D:&nbsp</p>
 								</Rating>
-								<Rating rating={cell.value.quality / 2} size={15} count={true}
+								<Rating rating={cell.value.quality} size={15} count={true}
 									><p slot="pretext">Q:&nbsp</p>
 								</Rating>
 							{:else if cell.key == "difficulty" || cell.key == "quality"}
-								<Rating rating={cell.value / 2} size={15} count={true} />
+								<Rating rating={cell.value} size={15} count={true} />
 							{:else if cell.value == null}
 								<div style="overflow: hidden;">-</div>
 							{:else}
