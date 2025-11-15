@@ -16,6 +16,7 @@
 	// generate unique id for full star and gray star
 	const fullStarId: string = generateId();
 	const grayStarId: string = generateId();
+	rating = rating / 2;
 	let fullStars: number = Math.floor(rating);
 	let rateDiffence = rating - fullStars;
 	let percentRating = Math.round(rateDiffence * 100);
